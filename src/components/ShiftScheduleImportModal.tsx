@@ -18,11 +18,12 @@ const SHIFT_DISPLAY_MAP: Record<string, string> = {
 };
 
 // Employees to display (exclude last 2: security staff)
-const DISPLAY_EMPLOYEES = ['Văn Ngọc Huy', 'Châu Trọng Lịnh', 'Nguyễn Hoàng Hải', 'Lương Minh Tuân', 'Lê Minh Hoàng'];
+const DISPLAY_EMPLOYEES = ['Văn Ngọc Huy', 'Châu Trọng Lĩnh', 'Nguyễn Hoàng Hải', 'Lương Minh Tuấn', 'Lê Minh Hoàng'];
 
 export default function ShiftScheduleImportModal({ onClose, onImport, currentMonth }: ShiftScheduleImportModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [detectedMonth, setDetectedMonth] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Generate sample Excel template
@@ -35,7 +36,7 @@ export default function ShiftScheduleImportModal({ onClose, onImport, currentMon
     // Create data rows (1-31 days)
     const data: any[] = [headerRow];
     for (let day = 1; day <= 31; day++) {
-      const row = [day];
+      const row: (string | number)[] = [day];
       // Add empty cells for employees
       for (let i = 1; i < headerRow.length; i++) {
         row.push('');
@@ -66,7 +67,8 @@ export default function ShiftScheduleImportModal({ onClose, onImport, currentMon
       ['HƯỚNG DẪN ĐIỀN LỊCH TRỰC'],
       [],
       ['Quy tắc:'],
-      ['X hoặc X1', '= Ca 1 (sáng)'],
+      ['X', '= Hành chính'],
+      ['X1', '= Ca 1 (sáng)'],
       ['X2', '= Ca 2 (chiều)'],
       ['Đ', '= Ca 3 (đêm)'],
       ['C', '= Đi công tác (bỏ qua)'],
@@ -90,7 +92,7 @@ export default function ShiftScheduleImportModal({ onClose, onImport, currentMon
   };
 
   // Parse Excel file
-  const parseExcelFile = (buffer: ArrayBuffer): ShiftSchedule[] => {
+  const parseExcelFile = (buffer: ArrayBuffer, targetMonth: string): ShiftSchedule[] => {
     try {
       const workbook = XLSX.read(buffer, { type: 'array' });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -135,8 +137,8 @@ export default function ShiftScheduleImportModal({ onClose, onImport, currentMon
           if (!displayShift) continue;
           
           schedules.push({
-            id: `${currentMonth}-${day}-${personName}`.replace(/\s+/g, '_'),
-            month: currentMonth,
+            id: `${targetMonth}-${day}-${personName}`.replace(/\s+/g, '_'),
+            month: targetMonth,
             personName,
             date: day,
             shiftType: normalizedShift // Store original value (X, X1, X2, Đ)
@@ -156,10 +158,20 @@ export default function ShiftScheduleImportModal({ onClose, onImport, currentMon
     
     setIsLoading(true);
     setError(null);
+    setDetectedMonth(null);
     
     try {
+      // Try to extract month from filename (format: YYYY-MM)
+      const fileName = file.name;
+      const monthMatch = fileName.match(/(\d{4}-\d{2})/);
+      const targetMonth = monthMatch ? monthMatch[1] : currentMonth;
+      
+      if (monthMatch) {
+        setDetectedMonth(monthMatch[1]);
+      }
+
       const buffer = await file.arrayBuffer();
-      const schedules = parseExcelFile(buffer);
+      const schedules = parseExcelFile(buffer, targetMonth);
       
       if (schedules.length === 0) {
         setError('Không tìm thấy dữ liệu hợp lệ trong file. Vui lòng kiểm tra lại format.');
@@ -214,9 +226,17 @@ export default function ShiftScheduleImportModal({ onClose, onImport, currentMon
           {/* Info Box */}
           <div className="flex gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <AlertCircle size={18} className="text-blue-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-blue-900">
-              Chọn file Excel hoặc tạo file mẫu để nhập lịch trực cho tháng <span className="font-bold">{currentMonth}</span>
-            </p>
+            <div className="flex flex-col gap-1">
+              <p className="text-sm text-blue-900">
+                Chọn file Excel hoặc tạo file mẫu để nhập lịch trực.
+              </p>
+              <p className="text-xs text-blue-700">
+                Mặc định: <span className="font-bold">Tháng {currentMonth}</span>
+              </p>
+              <p className="text-[10px] text-blue-600 italic">
+                Mẹo: Tên file chứa "YYYY-MM" (VD: Lich_truc_2026-05) sẽ tự động chọn tháng đó.
+              </p>
+            </div>
           </div>
 
           {/* Error Message */}
@@ -270,10 +290,11 @@ export default function ShiftScheduleImportModal({ onClose, onImport, currentMon
           <div className="bg-surface-container-lowest rounded-xl p-3 flex flex-col gap-2">
             <p className="text-[11px] font-bold text-on-surface-variant uppercase">Quy tắc ca trực:</p>
             <ul className="text-[10px] text-on-surface-variant space-y-1">
-              <li><span className="font-bold">X, X1</span> = Ca 1 (sáng)</li>
+              <li><span className="font-bold">X</span> = Hành chính</li>
+              <li><span className="font-bold">X1</span> = Ca 1 (sáng)</li>
               <li><span className="font-bold">X2</span> = Ca 2 (chiều)</li>
               <li><span className="font-bold">Đ</span> = Ca 3 (đêm)</li>
-              <li><span className="font-bold">C</span> = Đi công tác (bỏ qua)</li>
+              <li><span className="font-bold">C</span> = Đi công tác</li>
               <li><span className="font-bold">Trống</span> = Không có lịch trực</li>
             </ul>
           </div>

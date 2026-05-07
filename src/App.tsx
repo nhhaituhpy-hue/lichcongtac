@@ -36,13 +36,13 @@ export default function App() {
   useEffect(() => { tasksRef.current = tasks; }, [tasks]);
   useEffect(() => { selectedTaskRef.current = selectedTask; }, [selectedTask]);
   useEffect(() => { isModalOpenRef.current = isModalOpen; }, [isModalOpen]);
-  
+
   const SESSION_TIMEOUT = 60 * 60 * 1000; // 1 hour in ms
 
   const [userRole, setUserRole] = useState<'VIEWER' | 'ADMIN' | null>(() => {
     const savedRole = sessionStorage.getItem('dvor_user_role');
     const loginTimestamp = sessionStorage.getItem('dvor_login_timestamp');
-    
+
     if (savedRole && loginTimestamp) {
       const elapsed = Date.now() - parseInt(loginTimestamp);
       if (elapsed < SESSION_TIMEOUT) {
@@ -107,7 +107,7 @@ export default function App() {
         const year = now.getFullYear();
         monthStr = `${year}-${month}`;
       }
-      
+
       const response = await fetch(`/api/shift-schedules?month=${monthStr}&t=${Date.now()}`, {
         cache: 'no-store',
         headers: {
@@ -139,7 +139,7 @@ export default function App() {
     syncInternetTime();
     fetchTasks();
     fetchShiftSchedules();
-    
+
     // Periodically fetch tasks for real-time updates (every 5 seconds)
     const pollInterval = setInterval(() => {
       if (document.visibilityState === 'visible') {
@@ -193,7 +193,7 @@ export default function App() {
   const handleDeleteFutureTasks = async (titleToMatch: string) => {
     const todayKey = getVietnamTodayKey();
     const normalizedMatch = titleToMatch.trim().toLowerCase().normalize('NFC');
-    
+
     const tasksToDelete = tasks.filter(t => {
       const normalizedTitle = t.title.trim().toLowerCase().normalize('NFC');
       const isMatch = normalizedTitle === normalizedMatch;
@@ -246,7 +246,7 @@ export default function App() {
   const handleUpdateTask = async (updatedTask: Task) => {
     // ALWAYS use the latest data from tasksRef to check existence
     const stillExists = tasksRef.current.some(t => t.id === updatedTask.id);
-    
+
     if (!stillExists) {
       alert('Không thể cập nhật: Công việc này đã bị xóa bởi người dùng khác.');
       setIsModalOpen(false);
@@ -261,7 +261,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedTask)
       });
-      
+
       if (!response.ok) throw new Error('Update failed');
 
       setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
@@ -275,36 +275,36 @@ export default function App() {
     }
   };
 
-  const handleCreateRecurringTasks = async (data: { 
+  const handleCreateRecurringTasks = async (data: {
     mode: 'FRIDAY_PRIORITY' | 'FIXED_DAY' | 'DATE_RANGE',
-    titleWeekly?: string, 
-    titleMonthly?: string, 
-    titleQuarterly?: string, 
+    titleWeekly?: string,
+    titleMonthly?: string,
+    titleQuarterly?: string,
     titleFixed?: string,
     titleRange?: string,
     dayOfMonth?: number,
     isLastDay?: boolean,
     startDate?: string,
     endDate?: string,
-    notes: string 
+    notes: string
   }) => {
     const currentYear = getNow().getFullYear();
     const newTasks: Task[] = [];
-    
+
     if (data.mode === 'FIXED_DAY') {
       // Logic for fixed day in month
       for (let month = 0; month < 12; month++) {
         let actualDay = data.dayOfMonth || 1;
         const lastDayOfMonth = new Date(currentYear, month + 1, 0).getDate();
-        
+
         if (data.isLastDay) {
           actualDay = lastDayOfMonth;
         } else if (actualDay > lastDayOfMonth) {
           actualDay = lastDayOfMonth;
         }
-        
+
         const dateStr = `${currentYear}-${String(month + 1).padStart(2, '0')}-${String(actualDay).padStart(2, '0')}`;
-        
+
         newTasks.push({
           id: `recurring-fixed-${Date.now()}-${month}`,
           title: data.titleFixed || '',
@@ -319,7 +319,7 @@ export default function App() {
       if (data.startDate && data.endDate) {
         const start = new Date(data.startDate);
         const end = new Date(data.endDate);
-        
+
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
           const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
           newTasks.push({
@@ -349,12 +349,12 @@ export default function App() {
 
       const startDate = new Date(currentYear, 0, 1);
       const endDate = new Date(currentYear, 11, 31);
-      
+
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         if (d.getDay() === 5) {
           let title = '';
           const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-          
+
           if (isLastFridayOfQuarter(d)) {
             title = data.titleQuarterly || data.titleMonthly || data.titleWeekly || '';
           } else if (isLastFridayOfMonth(d)) {
@@ -376,7 +376,7 @@ export default function App() {
         }
       }
     }
-    
+
     setSyncStatus('SAVING');
     try {
       await fetch('/api/tasks', {
@@ -420,7 +420,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(schedules)
       });
-      
+
       if (!postRes.ok) {
         const errorData = await postRes.json();
         throw new Error((errorData as any).error || 'Không thể lưu lịch mới');
@@ -461,15 +461,15 @@ export default function App() {
               transition={{ duration: 0.2 }}
               className="h-full"
             >
-              <Dashboard 
-                tasks={tasks} 
+              <Dashboard
+                tasks={tasks}
                 userRole={userRole}
                 onCreateTask={(date: string) => {
                   if (userRole !== 'ADMIN') return;
                   setCreateTaskDate(date);
                   setIsCreateTaskModalOpen(true);
-                }} 
-                onDeleteTask={handleDeleteTask} 
+                }}
+                onDeleteTask={handleDeleteTask}
                 onTaskClick={handleTaskClick}
                 onOpenRecurringModal={() => setIsRecurringModalOpen(true)}
                 onLogout={handleLogout}
@@ -485,20 +485,20 @@ export default function App() {
         </main>
       </div>
 
-      <TaskModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <TaskModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         task={selectedTask}
         onSave={handleUpdateTask}
         onDeleteFuture={handleDeleteFutureTasks}
         showDeleteFuture={tasks.filter(t => t.title.trim().toLowerCase().normalize('NFC') === selectedTask?.title.trim().toLowerCase().normalize('NFC')).length > 1}
         userRole={userRole}
       />
-      <CreateTaskModal 
+      <CreateTaskModal
         isOpen={isCreateTaskModalOpen}
-        initialDate={createTaskDate} 
-        onClose={() => setIsCreateTaskModalOpen(false)} 
-        onSave={handleSaveTask} 
+        initialDate={createTaskDate}
+        onClose={() => setIsCreateTaskModalOpen(false)}
+        onSave={handleSaveTask}
       />
       <RecurringTaskModal
         isOpen={isRecurringModalOpen}
