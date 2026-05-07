@@ -9,17 +9,59 @@ interface LoginProps {
 export default function Login({ onLogin }: LoginProps) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [needsCaptcha, setNeedsCaptcha] = useState(false);
+  const [captchaQuestion, setCaptchaQuestion] = useState('');
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Simple hashing function to map PINs to the requested strings
+  // This is obfuscated so "888888" and "123" don't appear in plain text
+  const getHashedPin = (input: string) => {
+    const adminTarget = [56, 56, 56, 56, 56, 56].map(c => String.fromCharCode(c)).join(''); // "888888"
+    const userTarget = [49, 50, 51].map(c => String.fromCharCode(c)).join(''); // "123"
+    
+    if (input === adminTarget) return 'hackerngudothaycutdi';
+    if (input === userTarget) return 'hackertinhlamgiday';
+    return 'invalid_' + Math.random().toString(36).substring(7);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin === '123') {
-      onLogin('VIEWER');
-    } else if (pin === '888888') {
-      onLogin('ADMIN');
-    } else {
+    if (isLoading) return;
+    setIsLoading(true);
+    
+    try {
+      const hashedPin = getHashedPin(pin);
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hashedPin, captchaAnswer })
+      });
+
+      const data = await response.json() as { 
+        role?: 'VIEWER' | 'ADMIN', 
+        error?: string, 
+        needsCaptcha?: boolean,
+        captchaQuestion?: string
+      };
+
+      if (response.ok) {
+        onLogin(data.role!);
+      } else {
+        setNeedsCaptcha(!!data.needsCaptcha);
+        if (data.captchaQuestion) {
+          setCaptchaQuestion(data.captchaQuestion);
+        }
+        setErrorMessage(data.error || 'Mã PIN không chính xác');
+        throw new Error(data.error || 'Unauthorized');
+      }
+    } catch (err: any) {
       setError(true);
-      setPin('');
+      if (!needsCaptcha) setPin('');
       setTimeout(() => setError(false), 2000);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -65,13 +107,31 @@ export default function Login({ onLogin }: LoginProps) {
                     pattern="[0-9]*"
                     autoFocus
                   />
+                  
+                  {needsCaptcha && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="mt-6 flex flex-col gap-2"
+                    >
+                      <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant px-1">Xác nhận: {captchaQuestion || 'Đang tải...'}</label>
+                      <input
+                        type="text"
+                        value={captchaAnswer}
+                        onChange={(e) => setCaptchaAnswer(e.target.value)}
+                        placeholder="Kết quả"
+                        className="w-full bg-surface-container-low border-2 border-transparent focus:border-primary/20 rounded-xl px-4 py-3 text-center font-black outline-none transition-all"
+                      />
+                    </motion.div>
+                  )}
+
                   {error && (
                     <motion.p
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="text-error text-[10px] font-black uppercase text-center mt-3 tracking-wider"
                     >
-                      Mã PIN không chính xác. Vui lòng thử lại.
+                      {errorMessage || 'Mã PIN không chính xác. Vui lòng thử lại.'}
                     </motion.p>
                   )}
                 </div>
@@ -79,10 +139,13 @@ export default function Login({ onLogin }: LoginProps) {
 
               <button
                 type="submit"
-                className="w-full bg-primary hover:bg-primary-container text-on-primary py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-3 group"
+                disabled={isLoading}
+                className={`w-full bg-primary hover:bg-primary-container text-on-primary py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-3 group ${
+                  isLoading ? 'opacity-70 cursor-not-allowed' : ''
+                }`}
               >
-                <span>Xác nhận truy cập</span>
-                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                <span>{isLoading ? 'Đang xác thực...' : 'Xác nhận truy cập'}</span>
+                {!isLoading && <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />}
               </button>
             </form>
 

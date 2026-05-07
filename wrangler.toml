@@ -1,7 +1,15 @@
 name = "lichcongtactuh"
 pages_build_output_dir = "dist"
 
+[vars]
+ADMIN_PIN = "hackerngudothaycutdi"
+USER_PIN = "hackertinhlamgiday"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "lichcongtac-db"
 database_id = "0f049cd8-79a3-474a-aaeb-1d055b120228"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "d0379ee1f94143729d1c07690f2f755b" # You will need to replace this with your actual KV ID or run wrangler kv:namespace create
