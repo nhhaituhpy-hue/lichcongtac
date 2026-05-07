@@ -1,0 +1,7 @@
+name = "lichcongtactuh"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lichcongtac-db"
+database_id = "0f049cd8-79a3-474a-aaeb-1d055b120228"

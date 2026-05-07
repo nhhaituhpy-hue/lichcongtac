@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Plus, Clock, Users, Cloud, Calendar, ChevronLeft, ChevronRight, Trash2, Settings } from 'lucide-react';
+import { Plus, Clock, Users, Cloud, Calendar, ChevronLeft, ChevronRight, Trash2, Settings, LogOut } from 'lucide-react';
 import { Task, TaskStatus } from '../types.ts';
 import { motion } from 'framer-motion';
+import { getNow, getVietnamTodayKey } from '../utils/timeUtils';
 
 interface DashboardProps {
   tasks: Task[];
@@ -9,6 +10,8 @@ interface DashboardProps {
   onDeleteTask: (taskId: string) => void;
   onTaskClick: (task: Task) => void;
   onOpenRecurringModal?: () => void;
+  onLogout: () => void;
+  userRole: 'VIEWER' | 'ADMIN';
   syncStatus: 'SAVING' | 'SAVED';
   lastSyncTime: Date | null;
 }
@@ -17,7 +20,7 @@ function getDaysFromWeek(yearStr: string, weekStr: string) {
   const year = parseInt(yearStr);
   const week = parseInt(weekStr);
   const jan4 = new Date(year, 0, 4);
-  const dayIndex = (jan4.getDay() + 6) % 7; 
+  const dayIndex = (jan4.getDay() + 6) % 7;
   const targetMonday = new Date(year, 0, 4 - dayIndex);
   targetMonday.setDate(targetMonday.getDate() + (week - 1) * 7);
 
@@ -40,7 +43,7 @@ function getDaysFromWeek(yearStr: string, weekStr: string) {
 }
 
 function getCurrentWeek() {
-  const now = new Date();
+  const now = getNow();
   const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
   const dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
@@ -65,11 +68,13 @@ const StatusBadge = ({ status }: { status: TaskStatus }) => {
   );
 };
 
-export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskClick, onOpenRecurringModal, syncStatus, lastSyncTime }: DashboardProps) {
+export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskClick, onOpenRecurringModal, onLogout, userRole, syncStatus, lastSyncTime }: DashboardProps) {
   const [selectedWeek, setSelectedWeek] = useState(getCurrentWeek());
   const [yearStr, weekStr] = selectedWeek.split('-W');
   const displayWeek = weekStr || '42';
   const DAYS = getDaysFromWeek(yearStr, weekStr);
+
+  const todayKey = getVietnamTodayKey();
 
   const handlePrevWeek = () => {
     const year = parseInt(selectedWeek.split('-W')[0]);
@@ -97,23 +102,31 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
       <div className="px-8 py-6 flex flex-col md:flex-row justify-between md:items-end flex-shrink-0 gap-4">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-black text-primary tracking-tight uppercase">Bảng Lịch Công Tác Tuần</h1>
-            <button 
-              onClick={onOpenRecurringModal} 
-              title="Cài đặt công việc định kỳ"
-              className="p-2 border border-surface-container-highest text-on-surface-variant hover:text-primary hover:bg-primary/10 hover:border-primary/30 rounded-full transition-colors flex items-center justify-center cursor-pointer"
+            <h1 className="text-3xl font-black text-primary tracking-tight uppercase">Lịch Công Tác</h1>
+            {userRole === 'ADMIN' && (
+              <button
+                onClick={onOpenRecurringModal}
+                title="Cài đặt công việc định kỳ"
+                className="p-2 border border-surface-container-highest text-on-surface-variant hover:text-primary hover:bg-primary/10 hover:border-primary/30 rounded-full transition-colors flex items-center justify-center cursor-pointer"
+              >
+                <Settings size={18} />
+              </button>
+            )}
+            <button
+              onClick={onLogout}
+              title="Đăng xuất"
+              className="p-2 border border-surface-container-highest text-on-surface-variant hover:text-error hover:bg-error/10 hover:border-error/30 rounded-full transition-colors flex items-center justify-center cursor-pointer"
             >
-              <Settings size={18} />
+              <LogOut size={18} />
             </button>
-            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold border transition-colors ${
-              syncStatus === 'SAVING' 
-                ? 'bg-primary/10 text-primary border-primary/20' 
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold border transition-colors ${syncStatus === 'SAVING'
+                ? 'bg-primary/10 text-primary border-primary/20'
                 : 'bg-surface-container-highest text-on-surface-variant border-surface-container-highest'
-            }`}>
+              }`}>
               <Cloud size={14} className={syncStatus === 'SAVING' ? 'animate-pulse' : ''} />
               <span>
-                {syncStatus === 'SAVING' ? 'ĐANG LƯU...' : 
-                 (lastSyncTime ? `ĐÃ LƯU LÚC ${lastSyncTime.toLocaleTimeString('vi-VN')}` : 'ĐÃ ĐỒNG BỘ')}
+                {syncStatus === 'SAVING' ? 'ĐANG LƯU...' :
+                  (lastSyncTime ? `ĐÃ LƯU LÚC ${lastSyncTime.toLocaleTimeString('vi-VN')}` : 'ĐÃ ĐỒNG BỘ')}
               </span>
             </div>
           </div>
@@ -124,24 +137,24 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
 
         <div className="flex gap-2 items-center">
           <div className="flex bg-surface-container-lowest border border-surface-container-highest rounded-lg shadow-sm overflow-hidden">
-             <button onClick={handlePrevWeek} className="px-3 py-2 text-on-surface-variant hover:bg-surface-container transition-colors border-r border-surface-container-highest flex items-center justify-center cursor-pointer" title="Tuần trước">
-               <ChevronLeft size={16} />
-             </button>
-             <div className="relative flex items-center group hover:bg-surface-container transition-colors">
-               <input 
-                 type="week"
-                 value={selectedWeek}
-                 onChange={(e) => { if (e.target.value) setSelectedWeek(e.target.value) }}
-                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:top-0 [&::-webkit-calendar-picker-indicator]:left-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer" 
-               />
-               <div className="flex items-center gap-2 px-4 py-2 text-xs font-black uppercase text-on-surface select-none pointer-events-none">
-                 <Calendar size={16} className="text-on-surface-variant group-hover:text-primary transition-colors" />
-                 <span>Tuần {displayWeek}</span>
-               </div>
-             </div>
-             <button onClick={handleNextWeek} className="px-3 py-2 text-on-surface-variant hover:bg-surface-container transition-colors border-l border-surface-container-highest flex items-center justify-center cursor-pointer" title="Tuần sau">
-               <ChevronRight size={16} />
-             </button>
+            <button onClick={handlePrevWeek} className="px-3 py-2 text-on-surface-variant hover:bg-surface-container transition-colors border-r border-surface-container-highest flex items-center justify-center cursor-pointer" title="Tuần trước">
+              <ChevronLeft size={16} />
+            </button>
+            <div className="relative flex items-center group hover:bg-surface-container transition-colors">
+              <input
+                type="week"
+                value={selectedWeek}
+                onChange={(e) => { if (e.target.value) setSelectedWeek(e.target.value) }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:top-0 [&::-webkit-calendar-picker-indicator]:left-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+              />
+              <div className="flex items-center gap-2 px-4 py-2 text-xs font-black uppercase text-on-surface select-none pointer-events-none">
+                <Calendar size={16} className="text-on-surface-variant group-hover:text-primary transition-colors" />
+                <span>Tuần {displayWeek}</span>
+              </div>
+            </div>
+            <button onClick={handleNextWeek} className="px-3 py-2 text-on-surface-variant hover:bg-surface-container transition-colors border-l border-surface-container-highest flex items-center justify-center cursor-pointer" title="Tuần sau">
+              <ChevronRight size={16} />
+            </button>
           </div>
         </div>
       </div>
@@ -151,14 +164,23 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
         {DAYS.map((day) => {
           const dayTasks = tasks.filter(t => t.date === day.key);
           const isWeekend = day.label.includes('7') || day.label.includes('Chủ');
-          
+          const isToday = day.key === todayKey;
+
           return (
-            <div 
-              key={day.key} 
-              className={`flex flex-col flex-shrink-0 rounded-xl border border-surface-container-highest shadow-sm overflow-hidden ${isWeekend ? 'bg-surface-container-low/50' : 'bg-surface-container-low'}`}
+            <div
+              key={day.key}
+              className={`flex flex-col flex-shrink-0 rounded-xl border shadow-sm overflow-hidden transition-all ${isToday
+                  ? 'border-2 border-primary bg-primary/[0.05] shadow-lg scale-[1.01] z-10'
+                  : isWeekend
+                    ? 'border-surface-container-highest bg-surface-container-low/50'
+                    : 'border-surface-container-highest bg-surface-container-low'
+                }`}
             >
               {/* Day Header */}
-              <div className="px-5 py-3 bg-surface-container-low border-b border-surface-container-highest flex justify-between items-center">
+              <div className={`px-5 py-3 border-b flex justify-between items-center ${isToday
+                  ? 'bg-primary/10 border-primary/20'
+                  : 'bg-surface-container-low border-surface-container-highest'
+                }`}>
                 <div className="flex items-center gap-4">
                   <span className={`text-lg font-black ${isWeekend ? 'text-primary/70' : 'text-on-surface'}`}>{day.label}</span>
                   <span className="text-sm text-on-surface-variant font-medium">{day.date}</span>
@@ -172,15 +194,19 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
               <div className="p-4 flex flex-col gap-3">
                 <div className="flex flex-col gap-3">
                   {dayTasks.length === 0 && (
-                    <div 
-                      onClick={(e) => { e.stopPropagation(); onCreateTask(day.key); }}
-                      className="flex items-center justify-between gap-3 p-4 bg-white/50 border border-dashed border-surface-container-highest rounded-xl text-on-surface-variant/60 hover:text-primary hover:border-primary/40 hover:bg-white transition-all cursor-pointer group"
+                    <div
+                      onClick={(e) => {
+                        if (userRole !== 'ADMIN') return;
+                        e.stopPropagation();
+                        onCreateTask(day.key);
+                      }}
+                      className={`flex items-center justify-between gap-3 p-4 bg-white/50 border border-dashed border-surface-container-highest rounded-xl text-on-surface-variant/60 transition-all ${userRole === 'ADMIN' ? 'hover:text-primary hover:border-primary/40 hover:bg-white cursor-pointer group' : ''}`}
                     >
                       <div className="flex items-center gap-3">
-                        <Calendar size={20} className="group-hover:text-primary transition-colors" />
+                        <Calendar size={20} className={userRole === 'ADMIN' ? "group-hover:text-primary transition-colors" : ""} />
                         <p className="text-sm font-bold">Chưa có lịch trình</p>
                       </div>
-                      <Plus size={20} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {userRole === 'ADMIN' && <Plus size={20} className="opacity-0 group-hover:opacity-100 transition-opacity" />}
                     </div>
                   )}
                   {dayTasks.length > 0 && (
@@ -191,16 +217,15 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
                           layoutId={task.id}
                           onClick={() => onTaskClick(task)}
                           whileHover={{ y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-                          className={`p-4 rounded-xl border border-surface-container-highest bg-white shadow-sm flex flex-col md:flex-row md:items-center gap-4 cursor-pointer group border-l-4 ${
-                            task.status === TaskStatus.DONE ? 'border-l-emerald-500' :
-                            task.status === TaskStatus.NOT_STARTED ? 'border-l-error' :
-                            task.status === TaskStatus.CANCELLED ? 'border-l-on-surface-variant' : 'border-l-on-surface-variant/30'
-                          }`}
+                          className={`p-4 rounded-xl border border-surface-container-highest bg-white shadow-sm flex flex-col md:flex-row md:items-center gap-4 cursor-pointer group border-l-4 ${task.status === TaskStatus.DONE ? 'border-l-emerald-500' :
+                              task.status === TaskStatus.NOT_STARTED ? 'border-l-error' :
+                                task.status === TaskStatus.CANCELLED ? 'border-l-on-surface-variant' : 'border-l-on-surface-variant/30'
+                            }`}
                         >
                           <div className="flex flex-col md:w-32 flex-shrink-0">
-                             <StatusBadge status={task.status} />
+                            <StatusBadge status={task.status} />
                           </div>
-                          
+
                           <div className="flex-1 flex flex-col gap-1">
                             <h3 className="text-base font-black text-on-surface leading-snug group-hover:text-primary transition-colors">
                               {task.title}
@@ -224,25 +249,29 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
                               <span className="truncate">{task.personnel.join(', ')}</span>
                             </div>
                             <div className="flex items-center justify-end pl-2">
-                               <button 
-                                 onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }}
-                                 className="p-2 text-on-surface-variant/40 hover:text-error hover:bg-error/10 rounded-md md:opacity-0 group-hover:opacity-100 transition-all"
-                                 title="Xóa công việc"
-                               >
-                                 <Trash2 size={18} />
-                               </button>
+                              {userRole === 'ADMIN' && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }}
+                                  className="p-2 text-on-surface-variant/40 hover:text-error hover:bg-error/10 rounded-md md:opacity-0 group-hover:opacity-100 transition-all"
+                                  title="Xóa công việc"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              )}
                             </div>
                           </div>
                         </motion.div>
                       ))}
-                      
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); onCreateTask(day.key); }}
-                        className="w-full py-3 border-2 border-dashed border-surface-container-highest rounded-xl text-on-surface-variant/60 hover:text-primary hover:border-primary/40 hover:bg-white transition-all flex items-center justify-center gap-2 text-sm font-bold cursor-pointer"
-                      >
-                        <Plus size={20} />
-                        <span>Thêm việc</span>
-                      </button>
+
+                      {userRole === 'ADMIN' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onCreateTask(day.key); }}
+                          className="w-full py-3 border-2 border-dashed border-surface-container-highest rounded-xl text-on-surface-variant/60 hover:text-primary hover:border-primary/40 hover:bg-white transition-all flex items-center justify-center gap-2 text-sm font-bold cursor-pointer"
+                        >
+                          <Plus size={20} />
+                          <span>Thêm việc</span>
+                        </button>
+                      )}
                     </>
                   )}
                 </div>

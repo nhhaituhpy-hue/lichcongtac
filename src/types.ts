@@ -15,6 +15,7 @@ export interface Task {
   date: string; // ISO format
   equipmentId?: string;
   notes?: string;
+  templateId?: string;
 }
 
 export enum Frequency {

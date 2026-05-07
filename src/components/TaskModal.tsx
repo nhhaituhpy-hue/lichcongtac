@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Edit3, User, Flag } from 'lucide-react';
+import { X, Save, Edit3, User, Flag, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, TaskStatus } from '../types.ts';
 
@@ -8,9 +8,12 @@ interface TaskModalProps {
   onClose: () => void;
   task: Task | null;
   onSave: (task: Task) => void;
+  onDeleteFuture: (title: string) => void;
+  showDeleteFuture: boolean;
+  userRole: 'VIEWER' | 'ADMIN';
 }
 
-export default function TaskModal({ isOpen, onClose, task, onSave }: TaskModalProps) {
+export default function TaskModal({ isOpen, onClose, task, onSave, onDeleteFuture, showDeleteFuture, userRole }: TaskModalProps) {
   const [title, setTitle] = useState('');
   const [personnel, setPersonnel] = useState('');
   const [status, setStatus] = useState<TaskStatus>(TaskStatus.NOT_STARTED);
@@ -49,14 +52,14 @@ export default function TaskModal({ isOpen, onClose, task, onSave }: TaskModalPr
             className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm"
           />
           
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative bg-surface-container-lowest w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            className="relative w-full max-w-2xl max-h-[90vh] bg-surface rounded-3xl shadow-xl overflow-hidden z-10 border border-surface-container border-t-white/20 flex flex-col"
           >
             {/* Header */}
-            <div className="px-6 py-5 border-b border-surface-container flex justify-between items-center bg-surface-container-low/30">
+            <div className="px-8 py-6 bg-surface-container-lowest border-b border-surface-container flex justify-between items-center relative overflow-hidden flex-shrink-0">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                   <Edit3 size={20} />
@@ -75,7 +78,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave }: TaskModalPr
             </div>
 
             {/* Body */}
-            <div className="p-8">
+            <div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Chi tiết công việc</label>
@@ -84,8 +87,9 @@ export default function TaskModal({ isOpen, onClose, task, onSave }: TaskModalPr
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required
+                    disabled={userRole === 'VIEWER'}
                     placeholder="Nhập chi tiết công việc kỹ thuật..."
-                    className="w-full bg-surface border border-surface-container rounded-xl px-4 py-3 text-sm font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
+                    className={`w-full bg-surface border border-surface-container rounded-xl px-4 py-3 text-sm font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none placeholder:text-on-surface-variant/30 ${userRole === 'VIEWER' ? 'opacity-70 cursor-not-allowed' : ''}`}
                   />
                 </div>
 
@@ -138,14 +142,30 @@ export default function TaskModal({ isOpen, onClose, task, onSave }: TaskModalPr
             </div>
 
             {/* Footer */}
-            <div className="px-8 py-5 bg-surface-container/50 flex justify-end gap-3 border-t border-surface-container">
-              <button 
-                onClick={onClose}
-                type="button"
-                className="px-6 py-2.5 rounded-xl border border-surface-container-highest text-xs font-black uppercase hover:bg-surface-container transition-colors cursor-pointer"
-              >
-                Hủy
-              </button>
+            <div className="px-8 py-5 bg-surface-container/50 flex justify-between items-center border-t border-surface-container flex-shrink-0">
+              <div className="flex gap-3">
+                <button 
+                  onClick={onClose}
+                  type="button"
+                  className="px-6 py-2.5 rounded-xl border border-surface-container-highest text-xs font-black uppercase hover:bg-surface-container transition-colors cursor-pointer"
+                >
+                  Hủy
+                </button>
+                {userRole === 'ADMIN' && showDeleteFuture && (
+                  <button 
+                    onClick={() => {
+                      if (window.confirm(`Bạn có chắc chắn muốn xóa tất cả các lần lặp của công việc "${task?.title}" từ hôm nay trở đi không?`)) {
+                        onDeleteFuture(task?.title || '');
+                      }
+                    }}
+                    type="button"
+                    className="px-6 py-2.5 rounded-xl border border-error/30 text-error text-xs font-black uppercase hover:bg-error/10 transition-colors cursor-pointer flex items-center gap-2"
+                  >
+                    <Trash2 size={16} />
+                    <span>Xóa các lần lặp sau này</span>
+                  </button>
+                )}
+              </div>
               <button 
                 type="button"
                 onClick={handleSubmit}
