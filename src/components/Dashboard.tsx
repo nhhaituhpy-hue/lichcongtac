@@ -3,6 +3,7 @@ import { Plus, Clock, Users, Cloud, Calendar, ChevronLeft, ChevronRight, Trash2,
 import { Task, TaskStatus } from '../types.ts';
 import { motion } from 'framer-motion';
 import { getNow, getVietnamTodayKey } from '../utils/timeUtils';
+import InstallGuide from './InstallGuide';
 
 interface DashboardProps {
   tasks: Task[];
@@ -97,70 +98,75 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-surface-container-lowest md:bg-surface">
       {/* View Header */}
-      <div className="px-8 py-6 flex flex-col md:flex-row justify-between md:items-end flex-shrink-0 gap-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-black text-primary tracking-tight uppercase">Lịch Công Tác</h1>
-            {userRole === 'ADMIN' && (
+      <div className="px-4 md:px-8 py-4 md:py-6 flex flex-col md:flex-row justify-between md:items-center flex-shrink-0 gap-3 md:gap-4 border-b border-surface-container md:border-none sticky top-0 bg-surface/80 backdrop-blur-md z-30">
+        <div className="flex flex-col gap-1 md:gap-2">
+          <div className="flex items-center gap-3 md:gap-4">
+            <h1 className="text-xl md:text-3xl font-black text-primary tracking-tight uppercase">Lịch Công Tác</h1>
+            <div className="flex items-center gap-2">
+              {userRole === 'ADMIN' && (
+                <button
+                  onClick={onOpenRecurringModal}
+                  title="Cài đặt công việc định kỳ"
+                  className="p-2 border border-surface-container-highest text-on-surface-variant hover:text-primary hover:bg-primary/10 hover:border-primary/30 rounded-full transition-colors flex items-center justify-center cursor-pointer"
+                >
+                  <Settings size={16} className="md:w-[18px] md:h-[18px]" />
+                </button>
+              )}
               <button
-                onClick={onOpenRecurringModal}
-                title="Cài đặt công việc định kỳ"
-                className="p-2 border border-surface-container-highest text-on-surface-variant hover:text-primary hover:bg-primary/10 hover:border-primary/30 rounded-full transition-colors flex items-center justify-center cursor-pointer"
+                onClick={onLogout}
+                title="Đăng xuất"
+                className="p-2 border border-surface-container-highest text-on-surface-variant hover:text-error hover:bg-error/10 hover:border-error/30 rounded-full transition-colors flex items-center justify-center cursor-pointer"
               >
-                <Settings size={18} />
+                <LogOut size={16} className="md:w-[18px] md:h-[18px]" />
               </button>
-            )}
-            <button
-              onClick={onLogout}
-              title="Đăng xuất"
-              className="p-2 border border-surface-container-highest text-on-surface-variant hover:text-error hover:bg-error/10 hover:border-error/30 rounded-full transition-colors flex items-center justify-center cursor-pointer"
-            >
-              <LogOut size={18} />
-            </button>
-            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold border transition-colors ${syncStatus === 'SAVING'
+            </div>
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[9px] md:text-[10px] font-bold border transition-colors ${syncStatus === 'SAVING'
                 ? 'bg-primary/10 text-primary border-primary/20'
                 : 'bg-surface-container-highest text-on-surface-variant border-surface-container-highest'
               }`}>
-              <Cloud size={14} className={syncStatus === 'SAVING' ? 'animate-pulse' : ''} />
-              <span>
+              <Cloud size={12} className={syncStatus === 'SAVING' ? 'animate-pulse' : ''} />
+              <span className="hidden sm:inline">
                 {syncStatus === 'SAVING' ? 'ĐANG LƯU...' :
                   (lastSyncTime ? `ĐÃ LƯU LÚC ${lastSyncTime.toLocaleTimeString('vi-VN')}` : 'ĐÃ ĐỒNG BỘ')}
               </span>
+              <span className="sm:hidden">
+                {syncStatus === 'SAVING' ? '...' : (lastSyncTime ? lastSyncTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'OK')}
+              </span>
             </div>
           </div>
-          <p className="text-on-surface-variant text-sm font-medium">
-            Đài DVOR/DME Tuy Hòa • {DAYS[0].date} - {DAYS[6].date}
+          <p className="text-on-surface-variant text-[11px] md:text-sm font-medium">
+            Đài DVOR/DME Tuy Hòa • <span className="text-on-surface font-bold">{DAYS[0].date} - {DAYS[6].date}</span>
           </p>
         </div>
 
-        <div className="flex gap-2 items-center">
-          <div className="flex bg-surface-container-lowest border border-surface-container-highest rounded-lg shadow-sm overflow-hidden">
-            <button onClick={handlePrevWeek} className="px-3 py-2 text-on-surface-variant hover:bg-surface-container transition-colors border-r border-surface-container-highest flex items-center justify-center cursor-pointer" title="Tuần trước">
-              <ChevronLeft size={16} />
+        <div className="flex gap-2 items-center justify-between md:justify-end">
+          <div className="flex flex-1 md:flex-none bg-surface-container-lowest border border-surface-container-highest rounded-xl shadow-sm overflow-hidden">
+            <button onClick={handlePrevWeek} className="flex-none px-3 md:px-3 py-2.5 md:py-2 text-on-surface-variant hover:bg-surface-container transition-colors border-r border-surface-container-highest flex items-center justify-center cursor-pointer" title="Tuần trước">
+              <ChevronLeft size={18} />
             </button>
-            <div className="relative flex items-center group hover:bg-surface-container transition-colors">
+            <div className="relative flex-1 md:flex-none flex items-center group hover:bg-surface-container transition-colors">
               <input
                 type="week"
                 value={selectedWeek}
                 onChange={(e) => { if (e.target.value) setSelectedWeek(e.target.value) }}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:top-0 [&::-webkit-calendar-picker-indicator]:left-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
               />
-              <div className="flex items-center gap-2 px-4 py-2 text-xs font-black uppercase text-on-surface select-none pointer-events-none">
-                <Calendar size={16} className="text-on-surface-variant group-hover:text-primary transition-colors" />
+              <div className="flex items-center justify-center gap-1.5 md:gap-2 px-2 md:px-4 py-2.5 md:py-2 text-[11px] md:text-xs font-black uppercase text-on-surface select-none pointer-events-none w-full whitespace-nowrap">
+                <Calendar size={14} className="text-on-surface-variant group-hover:text-primary transition-colors hidden sm:block" />
                 <span>Tuần {displayWeek}</span>
               </div>
             </div>
-            <button onClick={handleNextWeek} className="px-3 py-2 text-on-surface-variant hover:bg-surface-container transition-colors border-l border-surface-container-highest flex items-center justify-center cursor-pointer" title="Tuần sau">
-              <ChevronRight size={16} />
+            <button onClick={handleNextWeek} className="flex-none px-3 md:px-3 py-2.5 md:py-2 text-on-surface-variant hover:bg-surface-container transition-colors border-l border-surface-container-highest flex items-center justify-center cursor-pointer" title="Tuần sau">
+              <ChevronRight size={18} />
             </button>
           </div>
         </div>
       </div>
 
       {/* Vertical List Container */}
-      <div className="flex-1 overflow-y-auto px-8 pb-8 flex flex-col gap-6">
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-8 flex flex-col gap-4 md:gap-6 pt-4">
         {DAYS.map((day) => {
           const dayTasks = tasks.filter(t => t.date === day.key);
           const isWeekend = day.label.includes('7') || day.label.includes('Chủ');
@@ -169,30 +175,30 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
           return (
             <div
               key={day.key}
-              className={`flex flex-col flex-shrink-0 rounded-xl border shadow-sm overflow-hidden transition-all ${isToday
-                  ? 'border-2 border-primary bg-primary/[0.05] shadow-lg scale-[1.01] z-10'
+              className={`flex flex-col flex-shrink-0 rounded-2xl border shadow-sm overflow-hidden transition-all ${isToday
+                  ? 'border-2 border-primary bg-primary/[0.05] shadow-lg md:scale-[1.01] z-10'
                   : isWeekend
                     ? 'border-surface-container-highest bg-surface-container-low/50'
                     : 'border-surface-container-highest bg-surface-container-low'
                 }`}
             >
-              {/* Day Header */}
-              <div className={`px-5 py-3 border-b flex justify-between items-center ${isToday
-                  ? 'bg-primary/10 border-primary/20'
-                  : 'bg-surface-container-low border-surface-container-highest'
+              {/* Day Header - Sticky on Mobile */}
+              <div className={`px-4 md:px-5 py-2.5 md:py-3 border-b flex justify-between items-center sticky top-0 z-20 ${isToday
+                  ? 'bg-primary/20 border-primary/30 backdrop-blur-md'
+                  : 'bg-surface-container-low/90 border-surface-container-highest backdrop-blur-md'
                 }`}>
-                <div className="flex items-center gap-4">
-                  <span className={`text-lg font-black ${isWeekend ? 'text-primary/70' : 'text-on-surface'}`}>{day.label}</span>
-                  <span className="text-sm text-on-surface-variant font-medium">{day.date}</span>
+                <div className="flex items-center gap-3 md:gap-4">
+                  <span className={`text-base md:text-lg font-black ${isWeekend ? 'text-primary/70' : 'text-on-surface'}`}>{day.label}</span>
+                  <span className="text-xs md:text-sm text-on-surface-variant font-bold opacity-70">{day.date}</span>
                 </div>
-                <div className="w-6 h-6 rounded-full bg-surface-container border border-surface-container-highest flex items-center justify-center text-xs font-black text-on-surface-variant">
-                  {dayTasks.length}
+                <div className="px-2 py-0.5 rounded-full bg-surface-container border border-surface-container-highest flex items-center justify-center text-[10px] font-black text-on-surface-variant">
+                  {dayTasks.length} VIỆC
                 </div>
               </div>
 
               {/* Task Grid */}
-              <div className="p-4 flex flex-col gap-3">
-                <div className="flex flex-col gap-3">
+              <div className="p-3 md:p-4 flex flex-col gap-3">
+                <div className="flex flex-col gap-2 md:gap-3">
                   {dayTasks.length === 0 && (
                     <div
                       onClick={(e) => {
@@ -200,13 +206,13 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
                         e.stopPropagation();
                         onCreateTask(day.key);
                       }}
-                      className={`flex items-center justify-between gap-3 p-4 bg-white/50 border border-dashed border-surface-container-highest rounded-xl text-on-surface-variant/60 transition-all ${userRole === 'ADMIN' ? 'hover:text-primary hover:border-primary/40 hover:bg-white cursor-pointer group' : ''}`}
+                      className={`flex items-center justify-between gap-3 p-4 md:p-5 bg-white/50 border border-dashed border-surface-container-highest rounded-xl text-on-surface-variant/60 transition-all ${userRole === 'ADMIN' ? 'hover:text-primary hover:border-primary/40 hover:bg-white cursor-pointer group' : ''}`}
                     >
                       <div className="flex items-center gap-3">
-                        <Calendar size={20} className={userRole === 'ADMIN' ? "group-hover:text-primary transition-colors" : ""} />
-                        <p className="text-sm font-bold">Chưa có lịch trình</p>
+                        <Calendar size={18} className={userRole === 'ADMIN' ? "group-hover:text-primary transition-colors" : ""} />
+                        <p className="text-xs md:text-sm font-bold uppercase tracking-wider">Chưa có lịch trình</p>
                       </div>
-                      {userRole === 'ADMIN' && <Plus size={20} className="opacity-0 group-hover:opacity-100 transition-opacity" />}
+                      {userRole === 'ADMIN' && <Plus size={18} className="opacity-0 group-hover:opacity-100 transition-opacity" />}
                     </div>
                   )}
                   {dayTasks.length > 0 && (
@@ -216,43 +222,48 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
                           key={task.id}
                           layoutId={task.id}
                           onClick={() => onTaskClick(task)}
-                          whileHover={{ y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-                          className={`p-4 rounded-xl border border-surface-container-highest bg-white shadow-sm flex flex-col md:flex-row md:items-center gap-4 cursor-pointer group border-l-4 ${task.status === TaskStatus.DONE ? 'border-l-emerald-500' :
+                          whileHover={{ y: -2 }}
+                          className={`p-3 md:p-4 rounded-xl border border-surface-container-highest bg-white shadow-sm flex flex-col md:flex-row md:items-center gap-2 md:gap-4 cursor-pointer group border-l-4 transition-all active:scale-[0.98] ${task.status === TaskStatus.DONE ? 'border-l-emerald-500' :
                               task.status === TaskStatus.NOT_STARTED ? 'border-l-error' :
                                 task.status === TaskStatus.CANCELLED ? 'border-l-on-surface-variant' : 'border-l-on-surface-variant/30'
                             }`}
                         >
-                          <div className="flex flex-col md:w-32 flex-shrink-0">
+                          <div className="flex items-center justify-between md:w-32 flex-shrink-0">
                             <StatusBadge status={task.status} />
+                            <div className="md:hidden">
+                              <ChevronRight size={16} className="text-on-surface-variant/30" />
+                            </div>
                           </div>
-
-                          <div className="flex-1 flex flex-col gap-1">
-                            <h3 className="text-base font-black text-on-surface leading-snug group-hover:text-primary transition-colors">
+ 
+                          <div className="flex-1 flex flex-col gap-0.5 md:gap-1">
+                            <h3 className="text-sm md:text-base font-black text-on-surface leading-tight md:leading-snug group-hover:text-primary transition-colors">
                               {task.title}
                             </h3>
                             {task.notes && (
-                              <p className="text-sm font-medium text-on-surface-variant/80 border-l-2 border-surface-container pl-2 mt-1">
+                              <p className="text-[11px] md:text-sm font-medium text-on-surface-variant/70 border-l-2 border-surface-container pl-2 mt-0.5 line-clamp-2 md:line-clamp-none">
                                 {task.notes}
                               </p>
                             )}
                           </div>
 
-                          <div className="flex flex-col sm:flex-row gap-4 md:items-center flex-shrink-0">
-                            {task.startTime && (
-                              <div className="flex items-center gap-2 text-on-surface-variant text-sm font-medium">
-                                <Clock size={16} className="opacity-50" />
-                                <span>{task.startTime} - {task.endTime}</span>
+                          <div className="flex flex-row md:items-center justify-between md:justify-start gap-4 flex-shrink-0 mt-2 md:mt-0 pt-2 md:pt-0 border-t border-surface-container-lowest md:border-none">
+                            <div className="flex flex-col sm:flex-row gap-2 md:gap-4">
+                              {task.startTime && (
+                                <div className="flex items-center gap-1.5 text-on-surface-variant text-[11px] md:text-sm font-bold">
+                                  <Clock size={14} className="opacity-40" />
+                                  <span>{task.startTime} - {task.endTime}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-1.5 text-on-surface-variant text-[11px] md:text-sm font-bold max-w-[150px] md:max-w-[200px]">
+                                <Users size={14} className="opacity-40" />
+                                <span className="truncate">{task.personnel.join(', ')}</span>
                               </div>
-                            )}
-                            <div className="flex items-center gap-2 text-on-surface-variant text-sm font-medium w-full max-w-[200px]">
-                              <Users size={16} className="opacity-50" />
-                              <span className="truncate">{task.personnel.join(', ')}</span>
                             </div>
-                            <div className="flex items-center justify-end pl-2">
+                            <div className="flex items-center justify-end">
                               {userRole === 'ADMIN' && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }}
-                                  className="p-2 text-on-surface-variant/40 hover:text-error hover:bg-error/10 rounded-md md:opacity-0 group-hover:opacity-100 transition-all"
+                                  className="p-2 text-on-surface-variant/40 hover:text-error hover:bg-error/10 rounded-md md:opacity-0 group-hover:opacity-100 transition-all active:bg-error/20"
                                   title="Xóa công việc"
                                 >
                                   <Trash2 size={18} />
@@ -280,6 +291,7 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
           );
         })}
       </div>
+      <InstallGuide />
     </div>
   );
 }

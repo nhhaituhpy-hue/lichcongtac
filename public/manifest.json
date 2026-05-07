@@ -1,0 +1,21 @@
+{
+  "name": "Lịch Công Tác - Đài Tuy Hòa",
+  "short_name": "Lịch Công Tác",
+  "description": "Hệ thống quản lý lịch công tác kỹ thuật Đài DVOR/DME Tuy Hòa",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0061A3",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

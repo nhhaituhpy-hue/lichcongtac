@@ -56,17 +56,17 @@ export default function TaskModal({ isOpen, onClose, task, onSave, onDeleteFutur
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-2xl max-h-[90vh] bg-surface rounded-3xl shadow-xl overflow-hidden z-10 border border-surface-container border-t-white/20 flex flex-col"
+            className="relative w-[95%] md:w-full max-w-2xl max-h-[95vh] md:max-h-[90vh] bg-surface rounded-3xl shadow-xl overflow-hidden z-10 border border-surface-container border-t-white/20 flex flex-col"
           >
             {/* Header */}
-            <div className="px-8 py-6 bg-surface-container-lowest border-b border-surface-container flex justify-between items-center relative overflow-hidden flex-shrink-0">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  <Edit3 size={20} />
+            <div className="px-5 md:px-8 py-4 md:py-6 bg-surface-container-lowest border-b border-surface-container flex justify-between items-center relative overflow-hidden flex-shrink-0">
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <Edit3 size={18} className="md:w-5 md:h-5" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-on-surface leading-tight uppercase tracking-tight">Chi Tiết Công Việc</h2>
-                  <p className="text-xs font-medium text-on-surface-variant mt-1">Cập nhật thông tin và trạng thái nhiệm vụ</p>
+                  <h2 className="text-base md:text-xl font-black text-on-surface leading-tight uppercase tracking-tight">Chi Tiết Công Việc</h2>
+                  <p className="text-[10px] md:text-xs font-medium text-on-surface-variant mt-0.5 md:mt-1">Cập nhật thông tin và trạng thái nhiệm vụ</p>
                 </div>
               </div>
               <button 
@@ -78,7 +78,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave, onDeleteFutur
             </div>
 
             {/* Body */}
-            <div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
+            <div className="p-5 md:p-8 overflow-y-auto flex-1 custom-scrollbar">
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Chi tiết công việc</label>
@@ -89,7 +89,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave, onDeleteFutur
                     required
                     disabled={userRole === 'VIEWER'}
                     placeholder="Nhập chi tiết công việc kỹ thuật..."
-                    className={`w-full bg-surface border border-surface-container rounded-xl px-4 py-3 text-sm font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none placeholder:text-on-surface-variant/30 ${userRole === 'VIEWER' ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    className={`w-full bg-surface border border-surface-container rounded-xl px-4 py-3 text-base font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none placeholder:text-on-surface-variant/30 ${userRole === 'VIEWER' ? 'opacity-70 cursor-not-allowed' : ''}`}
                   />
                 </div>
 
@@ -101,7 +101,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave, onDeleteFutur
                       <select 
                         value={personnel}
                         onChange={(e) => setPersonnel(e.target.value)}
-                        className="w-full bg-surface border border-surface-container rounded-xl pl-10 pr-4 py-3 text-sm font-bold appearance-none focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none cursor-pointer">
+                        className="w-full bg-surface border border-surface-container rounded-xl pl-10 pr-4 py-3 text-base font-bold appearance-none focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none cursor-pointer">
                         <option value="">-- Để trống --</option>
                         <option>Văn Ngọc Huy</option>
                         <option>Nguyễn Hoàng Hải</option>
@@ -119,7 +119,7 @@ export default function TaskModal({ isOpen, onClose, task, onSave, onDeleteFutur
                       <select 
                         value={status}
                         onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                        className="w-full bg-surface border border-surface-container rounded-xl pl-10 pr-4 py-3 text-sm font-bold appearance-none focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none cursor-pointer">
+                        className="w-full bg-surface border border-surface-container rounded-xl pl-10 pr-4 py-3 text-base font-bold appearance-none focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none cursor-pointer">
                         <option value={TaskStatus.NOT_STARTED}>Chưa thực hiện</option>
                         <option value={TaskStatus.DONE}>Hoàn thành</option>
                         <option value={TaskStatus.CANCELLED}>Cancel</option>
@@ -135,19 +135,19 @@ export default function TaskModal({ isOpen, onClose, task, onSave, onDeleteFutur
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Các yêu cầu thêm hoặc thiết bị cần thiết..."
-                    className="w-full bg-surface-container-low border border-transparent rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:border-primary/30 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
+                    className="w-full bg-surface-container-low border border-transparent rounded-xl px-4 py-3 text-base font-medium focus:bg-white focus:border-primary/30 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
                   />
                 </div>
               </form>
             </div>
 
             {/* Footer */}
-            <div className="px-8 py-5 bg-surface-container/50 flex justify-between items-center border-t border-surface-container flex-shrink-0">
-              <div className="flex gap-3">
+            <div className="px-5 md:px-8 py-4 md:py-5 bg-surface-container/50 flex flex-col md:flex-row justify-between items-center border-t border-surface-container flex-shrink-0 gap-4">
+              <div className="flex w-full md:w-auto gap-3">
                 <button 
                   onClick={onClose}
                   type="button"
-                  className="px-6 py-2.5 rounded-xl border border-surface-container-highest text-xs font-black uppercase hover:bg-surface-container transition-colors cursor-pointer"
+                  className="flex-1 md:flex-none px-6 py-2.5 rounded-xl border border-surface-container-highest text-[11px] md:text-xs font-black uppercase hover:bg-surface-container transition-colors cursor-pointer"
                 >
                   Hủy
                 </button>
@@ -159,17 +159,17 @@ export default function TaskModal({ isOpen, onClose, task, onSave, onDeleteFutur
                       }
                     }}
                     type="button"
-                    className="px-6 py-2.5 rounded-xl border border-error/30 text-error text-xs font-black uppercase hover:bg-error/10 transition-colors cursor-pointer flex items-center gap-2"
+                    className="flex-1 md:flex-none px-4 py-2.5 rounded-xl border border-error/30 text-error text-[10px] md:text-xs font-black uppercase hover:bg-error/10 transition-colors cursor-pointer flex items-center gap-2"
                   >
-                    <Trash2 size={16} />
-                    <span>Xóa các lần lặp sau này</span>
+                    <Trash2 size={14} className="md:w-4 md:h-4" />
+                    <span>Xóa lặp</span>
                   </button>
                 )}
               </div>
               <button 
                 type="button"
                 onClick={handleSubmit}
-                className="px-8 py-2.5 bg-primary text-on-primary rounded-xl text-xs font-black uppercase hover:bg-primary-container transition-all shadow-lg shadow-primary/20 cursor-pointer active:scale-95 flex items-center gap-2">
+                className="w-full md:w-auto px-8 py-3 md:py-2.5 bg-primary text-on-primary rounded-xl text-[11px] md:text-xs font-black uppercase hover:bg-primary-container transition-all shadow-lg shadow-primary/20 cursor-pointer active:scale-95 flex items-center justify-center gap-2">
                 <Save size={16} />
                 <span>Cập nhật công việc</span>
               </button>

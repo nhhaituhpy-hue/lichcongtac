@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task, TaskStatus } from './types.ts';
 
@@ -25,6 +25,15 @@ export default function App() {
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [createTaskDate, setCreateTaskDate] = useState<string>('');
   const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
+
+  // Refs to keep track of latest state for async callbacks/intervals
+  const tasksRef = useRef<Task[]>([]);
+  const selectedTaskRef = useRef<Task | null>(null);
+  const isModalOpenRef = useRef(false);
+
+  useEffect(() => { tasksRef.current = tasks; }, [tasks]);
+  useEffect(() => { selectedTaskRef.current = selectedTask; }, [selectedTask]);
+  useEffect(() => { isModalOpenRef.current = isModalOpen; }, [isModalOpen]);
   
   const SESSION_TIMEOUT = 60 * 60 * 1000; // 1 hour in ms
 
@@ -60,24 +69,55 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<'SAVING' | 'SAVED'>('SAVED');
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
-      const response = await fetch('/api/tasks');
+      const response = await fetch(`/api/tasks?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Pragma': 'no-cache',
+          'Cache-Control': 'no-cache'
+        }
+      });
       const data = await response.json();
       if (Array.isArray(data)) {
+        // Use refs to check current UI state
+        if (selectedTaskRef.current && isModalOpenRef.current) {
+          const stillExists = data.some(t => t.id === selectedTaskRef.current?.id);
+          if (!stillExists) {
+            setIsModalOpen(false);
+            setSelectedTask(null);
+            alert('Công việc bạn đang xem đã bị xóa bởi người dùng khác.');
+          }
+        }
         setTasks(data);
       }
     } catch (e) {
       console.error('Failed to fetch tasks:', e);
     }
-  };
+  }, []); // Stable reference
 
   useEffect(() => {
     syncInternetTime();
     fetchTasks();
     
+    // Periodically fetch tasks for real-time updates (every 5 seconds)
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchTasks();
+      }
+    }, 5000);
+
+    // Refresh immediately when tab becomes visible or focused
+    const handleRefresh = () => {
+      if (document.visibilityState === 'visible') {
+        fetchTasks();
+      }
+    };
+    document.addEventListener('visibilitychange', handleRefresh);
+    window.addEventListener('focus', handleRefresh);
+
     // Periodically check for session expiration (every minute)
-    const interval = setInterval(() => {
+    const sessionInterval = setInterval(() => {
       const loginTimestamp = sessionStorage.getItem('dvor_login_timestamp');
       if (loginTimestamp) {
         const elapsed = Date.now() - parseInt(loginTimestamp);
@@ -87,7 +127,12 @@ export default function App() {
       }
     }, 60000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(pollInterval);
+      clearInterval(sessionInterval);
+      document.removeEventListener('visibilitychange', handleRefresh);
+      window.removeEventListener('focus', handleRefresh);
+    };
   }, []);
 
   const handleDeleteTask = async (taskId: string) => {
@@ -157,20 +202,34 @@ export default function App() {
   };
 
   const handleUpdateTask = async (updatedTask: Task) => {
+    // ALWAYS use the latest data from tasksRef to check existence
+    const stillExists = tasksRef.current.some(t => t.id === updatedTask.id);
+    
+    if (!stillExists) {
+      alert('Không thể cập nhật: Công việc này đã bị xóa bởi người dùng khác.');
+      setIsModalOpen(false);
+      setSelectedTask(null);
+      return;
+    }
+
     setSyncStatus('SAVING');
     try {
-      await fetch('/api/tasks', {
+      const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedTask)
       });
-      setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+      
+      if (!response.ok) throw new Error('Update failed');
+
+      setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
       setSyncStatus('SAVED');
       setLastSyncTime(getNow());
       setIsModalOpen(false);
     } catch (e) {
       console.error('Update failed:', e);
       setSyncStatus('SAVED');
+      alert('Có lỗi xảy ra khi cập nhật công việc.');
     }
   };
 

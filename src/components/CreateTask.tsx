@@ -26,6 +26,7 @@ export default function CreateTaskModal({ isOpen, initialDate, onClose, onSave }
       personnel: personnel ? [personnel] : [],
       status,
       date: initialDate,
+      notes,
     };
     onSave(newTask);
     
@@ -80,7 +81,7 @@ export default function CreateTaskModal({ isOpen, initialDate, onClose, onSave }
                     onChange={(e) => setTitle(e.target.value)}
                     required
                     placeholder="Nhập chi tiết công việc kỹ thuật..."
-                    className="w-full bg-surface border border-surface-container-highest rounded-xl px-4 py-3 text-sm font-medium focus:border-primary/50 focus:ring-4 focus:ring-primary/10 outline-none transition-all resize-none placeholder:text-on-surface-variant/40"
+                    className="w-full bg-surface border border-surface-container-highest rounded-xl px-4 py-3 text-base font-medium focus:border-primary/50 focus:ring-4 focus:ring-primary/10 outline-none transition-all resize-none placeholder:text-on-surface-variant/40"
                   />
                 </div>
 
@@ -92,7 +93,7 @@ export default function CreateTaskModal({ isOpen, initialDate, onClose, onSave }
                       <select 
                         value={personnel}
                         onChange={(e) => setPersonnel(e.target.value)}
-                        className="w-full bg-surface border border-surface-container-highest rounded-xl pl-10 pr-4 py-3 text-sm font-bold appearance-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 outline-none cursor-pointer"
+                        className="w-full bg-surface border border-surface-container-highest rounded-xl pl-10 pr-4 py-3 text-base font-bold appearance-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 outline-none cursor-pointer"
                       >
                         <option value="">-- Để trống --</option>
                         <option>Văn Ngọc Huy</option>
@@ -111,7 +112,7 @@ export default function CreateTaskModal({ isOpen, initialDate, onClose, onSave }
                       <select 
                         value={status}
                         onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                        className="w-full bg-surface border border-surface-container-highest rounded-xl pl-10 pr-4 py-3 text-sm font-bold appearance-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 outline-none cursor-pointer"
+                        className="w-full bg-surface border border-surface-container-highest rounded-xl pl-10 pr-4 py-3 text-base font-bold appearance-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 outline-none cursor-pointer"
                       >
                         <option value={TaskStatus.NOT_STARTED}>Chưa thực hiện</option>
                         <option value={TaskStatus.DONE}>Hoàn thành</option>
@@ -130,7 +131,7 @@ export default function CreateTaskModal({ isOpen, initialDate, onClose, onSave }
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Các yêu cầu thêm hoặc thiết bị cần thiết..."
-                    className="w-full bg-surface-container-low border border-transparent rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:border-primary/50 outline-none transition-all resize-none placeholder:text-on-surface-variant/40"
+                    className="w-full bg-surface-container-low border border-transparent rounded-xl px-4 py-3 text-base font-medium focus:bg-white focus:border-primary/50 outline-none transition-all resize-none placeholder:text-on-surface-variant/40"
                   />
                 </div>
               </form>

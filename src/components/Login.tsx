@@ -61,6 +61,8 @@ export default function Login({ onLogin }: LoginProps) {
                     placeholder="••••••"
                     className={`w-full bg-surface-container-low border-2 rounded-2xl px-6 py-4 text-center text-2xl font-black tracking-[0.5em] focus:bg-white outline-none transition-all ${error ? 'border-error animate-shake' : 'border-transparent focus:border-primary/20'
                       }`}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     autoFocus
                   />
                   {error && (

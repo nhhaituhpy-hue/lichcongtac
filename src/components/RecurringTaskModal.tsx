@@ -115,18 +115,18 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-2xl max-h-[90vh] bg-surface rounded-3xl shadow-xl overflow-hidden z-10 border border-surface-container border-t-white/20 flex flex-col"
+            className="relative w-[95%] md:w-full max-w-2xl max-h-[95vh] md:max-h-[90vh] bg-surface rounded-3xl shadow-xl overflow-hidden z-10 border border-surface-container border-t-white/20 flex flex-col"
           >
             {/* Header */}
-            <div className="px-8 py-6 bg-surface-container-lowest border-b border-surface-container flex justify-between items-center relative overflow-hidden flex-shrink-0">
+            <div className="px-5 md:px-8 py-4 md:py-6 bg-surface-container-lowest border-b border-surface-container flex justify-between items-center relative overflow-hidden flex-shrink-0">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-tertiary to-primary" />
-              <div className="flex items-center gap-4 relative z-10">
-                <div className="p-3 bg-primary/10 text-primary rounded-xl">
-                  <RefreshCw size={24} />
+              <div className="flex items-center gap-3 md:gap-4 relative z-10">
+                <div className="p-2 md:p-3 bg-primary/10 text-primary rounded-xl">
+                  <RefreshCw size={20} className="md:w-6 md:h-6" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-on-surface leading-tight uppercase tracking-tight">Cấu Hình Lịch Định Kỳ</h2>
-                  <p className="text-xs font-medium text-on-surface-variant mt-1">Chọn loại chu kỳ và thiết lập nội dung</p>
+                  <h2 className="text-base md:text-xl font-black text-on-surface leading-tight uppercase tracking-tight">Cấu Hình Lịch Định Kỳ</h2>
+                  <p className="text-[10px] md:text-xs font-medium text-on-surface-variant mt-0.5 md:mt-1">Chọn loại chu kỳ và thiết lập nội dung</p>
                 </div>
               </div>
               <button
@@ -138,7 +138,7 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
             </div>
 
             {/* Body */}
-            <div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
+            <div className="p-5 md:p-8 overflow-y-auto flex-1 custom-scrollbar">
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
                 {/* Mode Selector */}
@@ -149,7 +149,7 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                     <select
                       value={mode}
                       onChange={(e) => setMode(e.target.value as RecurringMode)}
-                      className="w-full bg-surface-container-low border-2 border-transparent rounded-xl pl-10 pr-4 py-3 text-sm font-bold appearance-none focus:border-primary/30 focus:bg-white outline-none cursor-pointer transition-all">
+                      className="w-full bg-surface-container-low border-2 border-transparent rounded-xl pl-10 pr-4 py-3 text-base font-bold appearance-none focus:border-primary/30 focus:bg-white outline-none cursor-pointer transition-all">
                       <option value="FRIDAY_PRIORITY">Báo cáo kỹ thuật thứ 6 hàng tuần (Ưu tiên Tháng/Quý)</option>
                       <option value="FIXED_DAY">Công việc cố định trong tháng (Tùy chỉnh)</option>
                       <option value="QUICK_REPORT">Báo cáo định kỳ / Chạy thử máy phát điện</option>
@@ -169,7 +169,7 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                         value={titleWeekly}
                         onChange={(e) => setTitleWeekly(e.target.value)}
                         placeholder="VD: Báo cáo kỹ thuật tuần"
-                        className="w-full bg-surface border border-surface-container rounded-xl px-4 py-3 text-sm font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
+                        className="w-full bg-surface border border-surface-container rounded-xl px-4 py-3 text-base font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
                       />
                     </div>
 
@@ -182,7 +182,7 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                         value={titleMonthly}
                         onChange={(e) => setTitleMonthly(e.target.value)}
                         placeholder="VD: Báo cáo kỹ thuật tháng"
-                        className="w-full bg-surface border border-surface-container rounded-xl px-4 py-3 text-sm font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
+                        className="w-full bg-surface border border-surface-container rounded-xl px-4 py-3 text-base font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
                       />
                     </div>
 
@@ -195,7 +195,7 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                         value={titleQuarterly}
                         onChange={(e) => setTitleQuarterly(e.target.value)}
                         placeholder="VD: Báo cáo kỹ thuật quý"
-                        className="w-full bg-surface border border-surface-container rounded-xl px-4 py-3 text-sm font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
+                        className="w-full bg-surface border border-surface-container rounded-xl px-4 py-3 text-base font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
                       />
                     </div>
 
@@ -216,7 +216,7 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                         value={titleFixed}
                         onChange={(e) => setTitleFixed(e.target.value)}
                         placeholder="VD: Gửi biên bản họp đài"
-                        className="w-full bg-surface border border-surface-container rounded-xl px-4 py-3 text-sm font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
+                        className="w-full bg-surface border border-surface-container rounded-xl px-4 py-3 text-base font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
                       />
                     </div>
 
@@ -232,7 +232,7 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                             disabled={isLastDay}
                             value={dayOfMonth}
                             onChange={(e) => setDayOfMonth(parseInt(e.target.value, 10) || 1)}
-                            className="w-full bg-surface border border-surface-container rounded-xl pl-10 pr-4 py-3 text-sm font-bold focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none disabled:opacity-50 disabled:bg-surface-container-highest transition-all"
+                            className="w-full bg-surface border border-surface-container rounded-xl pl-10 pr-4 py-3 text-base font-bold focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none disabled:opacity-50 disabled:bg-surface-container-highest transition-all"
                           />
                         </div>
                       </div>
@@ -263,7 +263,7 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                         <select
                           value={selectedReport}
                           onChange={(e) => setSelectedReport(e.target.value)}
-                          className="w-full bg-surface-container-low border-2 border-transparent rounded-xl pl-10 pr-4 py-3 text-sm font-bold appearance-none focus:border-primary/30 focus:bg-white outline-none cursor-pointer transition-all">
+                          className="w-full bg-surface-container-low border-2 border-transparent rounded-xl pl-10 pr-4 py-3 text-base font-bold appearance-none focus:border-primary/30 focus:bg-white outline-none cursor-pointer transition-all">
                           {REPORT_TYPES.map(type => (
                             <option key={type} value={type}>{type}</option>
                           ))}
@@ -283,7 +283,7 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                             disabled={isLastDay}
                             value={dayOfMonth}
                             onChange={(e) => setDayOfMonth(parseInt(e.target.value, 10) || 1)}
-                            className="w-full bg-surface border border-surface-container rounded-xl pl-10 pr-4 py-3 text-sm font-bold focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none disabled:opacity-50 disabled:bg-surface-container-highest transition-all"
+                            className="w-full bg-surface border border-surface-container rounded-xl pl-10 pr-4 py-3 text-base font-bold focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none disabled:opacity-50 disabled:bg-surface-container-highest transition-all"
                           />
                         </div>
                       </div>
@@ -314,11 +314,11 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                         value={titleRange}
                         onChange={(e) => setTitleRange(e.target.value)}
                         placeholder="VD: Thực hiện công việc tăng cường an ninh cấp độ 1"
-                        className="w-full bg-surface border border-surface-container rounded-xl px-4 py-3 text-sm font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
+                        className="w-full bg-surface border border-surface-container rounded-xl px-4 py-3 text-base font-medium focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-primary">Từ ngày</label>
                         <div className="relative">
@@ -327,7 +327,7 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="w-full bg-surface border border-surface-container rounded-xl pl-10 pr-4 py-3 text-sm font-bold focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none"
+                            className="w-full bg-surface border border-surface-container rounded-xl pl-10 pr-4 py-3 text-base font-bold focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none"
                           />
                         </div>
                       </div>
@@ -339,7 +339,7 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            className="w-full bg-surface border border-surface-container rounded-xl pl-10 pr-4 py-3 text-sm font-bold focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none"
+                            className="w-full bg-surface border border-surface-container rounded-xl pl-10 pr-4 py-3 text-base font-bold focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none"
                           />
                         </div>
                       </div>
@@ -354,27 +354,27 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Ghi chú thực hiện công việc..."
-                    className="w-full bg-surface-container-low border border-transparent rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:border-primary/30 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
+                    className="w-full bg-surface-container-low border border-transparent rounded-xl px-4 py-3 text-base font-medium focus:bg-white focus:border-primary/30 outline-none transition-all resize-none placeholder:text-on-surface-variant/30"
                   />
                 </div>
               </form>
             </div>
 
             {/* Footer */}
-            <div className="px-8 py-5 bg-surface-container/50 flex justify-end gap-3 border-t border-surface-container flex-shrink-0">
+            <div className="px-5 md:px-8 py-4 md:py-5 bg-surface-container/50 flex flex-col md:flex-row justify-end gap-3 border-t border-surface-container flex-shrink-0">
               <button
                 onClick={onClose}
                 type="button"
-                className="px-6 py-2.5 rounded-xl border border-surface-container-highest text-xs font-black uppercase hover:bg-surface-container transition-colors cursor-pointer"
+                className="w-full md:w-auto px-6 py-2.5 rounded-xl border border-surface-container-highest text-[11px] md:text-xs font-black uppercase hover:bg-surface-container transition-colors cursor-pointer"
               >
                 Hủy bỏ
               </button>
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="px-8 py-2.5 bg-primary text-on-primary rounded-xl text-xs font-black uppercase hover:bg-primary-container transition-all shadow-lg shadow-primary/20 cursor-pointer active:scale-95 flex items-center gap-2">
+                className="w-full md:w-auto px-8 py-3 md:py-2.5 bg-primary text-on-primary rounded-xl text-[11px] md:text-xs font-black uppercase hover:bg-primary-container transition-all shadow-lg shadow-primary/20 cursor-pointer active:scale-95 flex items-center justify-center gap-2">
                 <RefreshCw size={16} />
-                <span>{mode === 'DATE_RANGE' ? 'Tạo hàng loạt theo khoảng ngày' : `Tạo lịch cho năm ${getNow().getFullYear()}`}</span>
+                <span className="truncate">{mode === 'DATE_RANGE' ? 'Tạo hàng loạt' : `Tạo lịch năm ${getNow().getFullYear()}`}</span>
               </button>
             </div>
           </motion.div>
