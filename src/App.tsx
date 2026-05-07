@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Task, TaskStatus } from './types.ts';
+import { Task, TaskStatus, ShiftSchedule } from './types.ts';
 
 // Components
 import Dashboard from './components/Dashboard';
@@ -13,18 +13,20 @@ import CreateTaskModal from './components/CreateTask';
 import TaskModal from './components/TaskModal';
 import RecurringTaskModal from './components/RecurringTaskModal';
 import Login from './components/Login';
-import { syncInternetTime, getNow, getVietnamTodayKey } from './utils/timeUtils';
+import { syncInternetTime, getNow, getVietnamTodayKey, getCurrentWeek, getDaysFromWeek } from './utils/timeUtils';
 
 const LOCAL_STORAGE_KEY = 'dvor_tasks_data';
 
 
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [shiftSchedules, setShiftSchedules] = useState<ShiftSchedule[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [createTaskDate, setCreateTaskDate] = useState<string>('');
   const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
+  const [selectedWeek, setSelectedWeek] = useState(getCurrentWeek());
 
   // Refs to keep track of latest state for async callbacks/intervals
   const tasksRef = useRef<Task[]>([]);
@@ -96,14 +98,53 @@ export default function App() {
     }
   }, []); // Stable reference
 
+  const fetchShiftSchedules = useCallback(async (monthParam?: string) => {
+    try {
+      let monthStr = monthParam;
+      if (!monthStr) {
+        const now = getNow();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        monthStr = `${year}-${month}`;
+      }
+      
+      const response = await fetch(`/api/shift-schedules?month=${monthStr}&t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Pragma': 'no-cache',
+          'Cache-Control': 'no-cache'
+        }
+      });
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setShiftSchedules(prev => {
+          // Merge data: keep schedules for other months, replace for this month
+          const filtered = prev.filter(s => s.month !== monthStr);
+          return [...filtered, ...data];
+        });
+      }
+    } catch (e) {
+      console.error('Failed to fetch shift schedules:', e);
+    }
+  }, []);
+
+  const fetchSchedulesForVisibleRange = useCallback(() => {
+    const [year, week] = selectedWeek.split('-W');
+    const days = getDaysFromWeek(year, week);
+    const months = Array.from(new Set(days.map(d => d.month)));
+    months.forEach(m => fetchShiftSchedules(m));
+  }, [selectedWeek, fetchShiftSchedules]);
+
   useEffect(() => {
     syncInternetTime();
     fetchTasks();
+    fetchShiftSchedules();
     
     // Periodically fetch tasks for real-time updates (every 5 seconds)
     const pollInterval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         fetchTasks();
+        fetchSchedulesForVisibleRange();
       }
     }, 5000);
 
@@ -111,6 +152,7 @@ export default function App() {
     const handleRefresh = () => {
       if (document.visibilityState === 'visible') {
         fetchTasks();
+        fetchSchedulesForVisibleRange();
       }
     };
     document.addEventListener('visibilitychange', handleRefresh);
@@ -133,7 +175,7 @@ export default function App() {
       document.removeEventListener('visibilitychange', handleRefresh);
       window.removeEventListener('focus', handleRefresh);
     };
-  }, []);
+  }, [fetchTasks, fetchSchedulesForVisibleRange]);
 
   const handleDeleteTask = async (taskId: string) => {
     setSyncStatus('SAVING');
@@ -352,6 +394,56 @@ export default function App() {
     }
   };
 
+  const handleImportShiftSchedule = async (schedules: ShiftSchedule[]) => {
+    setSyncStatus('SAVING');
+    try {
+      // First, get the month from the first schedule
+      if (schedules.length === 0) {
+        setSyncStatus('SAVED');
+        return;
+      }
+
+      const month = schedules[0].month;
+
+      // Delete existing schedules for this month
+      const deleteRes = await fetch(`/api/shift-schedules?month=${month}`, {
+        method: 'DELETE'
+      });
+      if (!deleteRes.ok) {
+        const errorData = await deleteRes.json();
+        throw new Error((errorData as any).error || 'Không thể xóa lịch cũ');
+      }
+
+      // Import new schedules
+      const postRes = await fetch('/api/shift-schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(schedules)
+      });
+      
+      if (!postRes.ok) {
+        const errorData = await postRes.json();
+        throw new Error((errorData as any).error || 'Không thể lưu lịch mới');
+      }
+
+      // Update local state
+      setShiftSchedules(prev => {
+        // Remove old schedules for this month
+        const filtered = prev.filter(s => s.month !== month);
+        // Add new schedules
+        return [...filtered, ...schedules];
+      });
+
+      setSyncStatus('SAVED');
+      setLastSyncTime(getNow());
+      alert(`Đã nhập thành công ${schedules.length} ca trực cho tháng ${month}`);
+    } catch (e: any) {
+      console.error('Import shift schedule failed:', e);
+      setSyncStatus('SAVED');
+      alert(`Có lỗi xảy ra: ${e.message}`);
+    }
+  };
+
   if (!userRole) {
     return <Login onLogin={handleLogin} />;
   }
@@ -383,6 +475,10 @@ export default function App() {
                 onLogout={handleLogout}
                 syncStatus={syncStatus}
                 lastSyncTime={lastSyncTime}
+                shiftSchedules={shiftSchedules}
+                onImportShiftSchedule={handleImportShiftSchedule}
+                selectedWeek={selectedWeek}
+                onWeekChange={setSelectedWeek}
               />
             </motion.div>
           </AnimatePresence>

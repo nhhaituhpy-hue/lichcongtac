@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Plus, Clock, Users, Cloud, Calendar, ChevronLeft, ChevronRight, Trash2, Settings, LogOut } from 'lucide-react';
-import { Task, TaskStatus } from '../types.ts';
+import { useState, useEffect } from 'react';
+import { Plus, Clock, Users, Cloud, Calendar, ChevronLeft, ChevronRight, Trash2, Settings, LogOut, FileText } from 'lucide-react';
+import { Task, TaskStatus, ShiftSchedule } from '../types.ts';
 import { motion } from 'framer-motion';
-import { getNow, getVietnamTodayKey } from '../utils/timeUtils';
+import { getNow, getVietnamTodayKey, getDaysFromWeek, getCurrentWeek } from '../utils/timeUtils';
 import InstallGuide from './InstallGuide';
+import ShiftScheduleImportModal from './ShiftScheduleImportModal';
 
 interface DashboardProps {
   tasks: Task[];
@@ -15,43 +16,12 @@ interface DashboardProps {
   userRole: 'VIEWER' | 'ADMIN';
   syncStatus: 'SAVING' | 'SAVED';
   lastSyncTime: Date | null;
+  shiftSchedules?: ShiftSchedule[];
+  onImportShiftSchedule?: (schedules: ShiftSchedule[]) => void;
+  selectedWeek: string;
+  onWeekChange: (week: string) => void;
 }
 
-function getDaysFromWeek(yearStr: string, weekStr: string) {
-  const year = parseInt(yearStr);
-  const week = parseInt(weekStr);
-  const jan4 = new Date(year, 0, 4);
-  const dayIndex = (jan4.getDay() + 6) % 7;
-  const targetMonday = new Date(year, 0, 4 - dayIndex);
-  targetMonday.setDate(targetMonday.getDate() + (week - 1) * 7);
-
-  const days = [];
-  const labels = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
-
-  for (let i = 0; i < 7; i++) {
-    const current = new Date(targetMonday);
-    current.setDate(current.getDate() + i);
-    const dd = String(current.getDate()).padStart(2, '0');
-    const mm = String(current.getMonth() + 1).padStart(2, '0');
-    const yyyy = current.getFullYear();
-    days.push({
-      label: labels[i],
-      date: `${dd}/${mm}/${yyyy}`,
-      key: `${yyyy}-${mm}-${dd}`
-    });
-  }
-  return days;
-}
-
-function getCurrentWeek() {
-  const now = getNow();
-  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
-}
 
 const StatusBadge = ({ status }: { status: TaskStatus }) => {
   const configs = {
@@ -69,21 +39,71 @@ const StatusBadge = ({ status }: { status: TaskStatus }) => {
   );
 };
 
-export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskClick, onOpenRecurringModal, onLogout, userRole, syncStatus, lastSyncTime }: DashboardProps) {
-  const [selectedWeek, setSelectedWeek] = useState(getCurrentWeek());
+export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskClick, onOpenRecurringModal, onLogout, userRole, syncStatus, lastSyncTime, shiftSchedules = [], onImportShiftSchedule, selectedWeek, onWeekChange }: DashboardProps) {
   const [yearStr, weekStr] = selectedWeek.split('-W');
   const displayWeek = weekStr || '42';
   const DAYS = getDaysFromWeek(yearStr, weekStr);
+  const [showShiftModal, setShowShiftModal] = useState(false);
+  const [currentMonthForShift, setCurrentMonthForShift] = useState('');
 
   const todayKey = getVietnamTodayKey();
+
+  // Extract current month for shift schedule
+  useEffect(() => {
+    const now = getNow();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    setCurrentMonthForShift(`${year}-${month}`);
+  }, []);
+
+  // Get shift schedules for a specific date
+  const getShiftForDate = (dateKey: string) => {
+    const [year, month, day] = dateKey.split('-');
+    const monthStr = `${year}-${month}`;
+    const dayNum = parseInt(day);
+
+    const shifts = shiftSchedules.filter(
+      s => s.month === monthStr && s.date === dayNum
+    );
+    return shifts;
+  };
+
+  // Get shift priority for sorting
+  const getShiftPriority = (shiftType: string): number => {
+    const priority: Record<string, number> = {
+      'X': 1,
+      'X1': 1,
+      'X2': 2,
+      'Đ': 3
+    };
+    return priority[shiftType] || 99;
+  };
+
+  // Map shift type to display name
+  const getShiftDisplayName = (shiftType: string): string => {
+    const mapping: Record<string, string> = {
+      'X': 'Hành chính',
+      'X1': 'Ca 1',
+      'X2': 'Ca 2',
+      'Đ': 'Ca 3'
+    };
+    return mapping[shiftType] || shiftType;
+  };
+
+  // Handle shift schedule import
+  const handleImportShiftSchedule = (schedules: ShiftSchedule[]) => {
+    if (onImportShiftSchedule) {
+      onImportShiftSchedule(schedules);
+    }
+  };
 
   const handlePrevWeek = () => {
     const year = parseInt(selectedWeek.split('-W')[0]);
     const week = parseInt(selectedWeek.split('-W')[1]);
     if (week > 1) {
-      setSelectedWeek(`${year}-W${(week - 1).toString().padStart(2, '0')}`);
+      onWeekChange(`${year}-W${(week - 1).toString().padStart(2, '0')}`);
     } else {
-      setSelectedWeek(`${year - 1}-W52`);
+      onWeekChange(`${year - 1}-W52`);
     }
   };
 
@@ -91,9 +111,9 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
     const year = parseInt(selectedWeek.split('-W')[0]);
     const week = parseInt(selectedWeek.split('-W')[1]);
     if (week < 52) {
-      setSelectedWeek(`${year}-W${(week + 1).toString().padStart(2, '0')}`);
+      onWeekChange(`${year}-W${(week + 1).toString().padStart(2, '0')}`);
     } else {
-      setSelectedWeek(`${year + 1}-W01`);
+      onWeekChange(`${year + 1}-W01`);
     }
   };
 
@@ -106,13 +126,22 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
             <h1 className="text-xl md:text-3xl font-black text-primary tracking-tight uppercase">Lịch Công Tác</h1>
             <div className="flex items-center gap-2">
               {userRole === 'ADMIN' && (
-                <button
-                  onClick={onOpenRecurringModal}
-                  title="Cài đặt công việc định kỳ"
-                  className="p-2 border border-surface-container-highest text-on-surface-variant hover:text-primary hover:bg-primary/10 hover:border-primary/30 rounded-full transition-colors flex items-center justify-center cursor-pointer"
-                >
-                  <Settings size={16} className="md:w-[18px] md:h-[18px]" />
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowShiftModal(true)}
+                    title="Import lịch trực"
+                    className="p-2 border border-surface-container-highest text-on-surface-variant hover:text-primary hover:bg-primary/10 hover:border-primary/30 rounded-full transition-colors flex items-center justify-center cursor-pointer"
+                  >
+                    <FileText size={16} className="md:w-[18px] md:h-[18px]" />
+                  </button>
+                  <button
+                    onClick={onOpenRecurringModal}
+                    title="Cài đặt công việc định kỳ"
+                    className="p-2 border border-surface-container-highest text-on-surface-variant hover:text-primary hover:bg-primary/10 hover:border-primary/30 rounded-full transition-colors flex items-center justify-center cursor-pointer"
+                  >
+                    <Settings size={16} className="md:w-[18px] md:h-[18px]" />
+                  </button>
+                </>
               )}
               <button
                 onClick={onLogout}
@@ -123,8 +152,8 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
               </button>
             </div>
             <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[9px] md:text-[10px] font-bold border transition-colors ${syncStatus === 'SAVING'
-                ? 'bg-primary/10 text-primary border-primary/20'
-                : 'bg-surface-container-highest text-on-surface-variant border-surface-container-highest'
+              ? 'bg-primary/10 text-primary border-primary/20'
+              : 'bg-surface-container-highest text-on-surface-variant border-surface-container-highest'
               }`}>
               <Cloud size={12} className={syncStatus === 'SAVING' ? 'animate-pulse' : ''} />
               <span className="hidden sm:inline">
@@ -150,7 +179,7 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
               <input
                 type="week"
                 value={selectedWeek}
-                onChange={(e) => { if (e.target.value) setSelectedWeek(e.target.value) }}
+                onChange={(e) => { if (e.target.value) onWeekChange(e.target.value) }}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:top-0 [&::-webkit-calendar-picker-indicator]:left-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
               />
               <div className="flex items-center justify-center gap-1.5 md:gap-2 px-2 md:px-4 py-2.5 md:py-2 text-[11px] md:text-xs font-black uppercase text-on-surface select-none pointer-events-none w-full whitespace-nowrap">
@@ -176,16 +205,16 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
             <div
               key={day.key}
               className={`flex flex-col flex-shrink-0 rounded-2xl border shadow-sm overflow-hidden transition-all ${isToday
-                  ? 'border-2 border-primary bg-primary/[0.05] shadow-lg md:scale-[1.01] z-10'
-                  : isWeekend
-                    ? 'border-surface-container-highest bg-surface-container-low/50'
-                    : 'border-surface-container-highest bg-surface-container-low'
+                ? 'border-2 border-primary bg-primary/[0.05] shadow-lg md:scale-[1.01] z-10'
+                : isWeekend
+                  ? 'border-surface-container-highest bg-surface-container-low/50'
+                  : 'border-surface-container-highest bg-surface-container-low'
                 }`}
             >
               {/* Day Header - Sticky on Mobile */}
               <div className={`px-4 md:px-5 py-2.5 md:py-3 border-b flex justify-between items-center sticky top-0 z-20 ${isToday
-                  ? 'bg-primary/20 border-primary/30 backdrop-blur-md'
-                  : 'bg-surface-container-low/90 border-surface-container-highest backdrop-blur-md'
+                ? 'bg-primary/20 border-primary/30 backdrop-blur-md'
+                : 'bg-surface-container-low/90 border-surface-container-highest backdrop-blur-md'
                 }`}>
                 <div className="flex items-center gap-3 md:gap-4">
                   <span className={`text-base md:text-lg font-black ${isWeekend ? 'text-primary/70' : 'text-on-surface'}`}>{day.label}</span>
@@ -195,6 +224,26 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
                   {dayTasks.length} VIỆC
                 </div>
               </div>
+
+              {/* Shift Schedule Display */}
+              {getShiftForDate(day.key).length > 0 && (
+                <div className="px-4 md:px-5 py-2 md:py-3 bg-blue-50 border-b border-blue-200 flex items-center gap-3">
+                  <span className="text-[10px] md:text-[11px] font-black text-blue-900 uppercase whitespace-nowrap">LỊCH TRỰC:</span>
+                  <div className="flex-1 flex flex-col gap-1">
+                    <div className="flex flex-wrap gap-2">
+                      {getShiftForDate(day.key)
+                        .sort((a, b) => getShiftPriority(a.shiftType) - getShiftPriority(b.shiftType))
+                        .map((shift) => (
+                          <div key={shift.id} className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-full border border-blue-200 text-[10px] md:text-[11px] font-bold text-on-surface">
+                            <span className="text-blue-900">{shift.personName}</span>
+                            <span className="text-blue-500">-</span>
+                            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-900 rounded-full font-black text-[9px]">{getShiftDisplayName(shift.shiftType)}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Task Grid */}
               <div className="p-3 md:p-4 flex flex-col gap-3">
@@ -224,8 +273,8 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
                           onClick={() => onTaskClick(task)}
                           whileHover={{ y: -2 }}
                           className={`p-3 md:p-4 rounded-xl border border-surface-container-highest bg-white shadow-sm flex flex-col md:flex-row md:items-center gap-2 md:gap-4 cursor-pointer group border-l-4 transition-all active:scale-[0.98] ${task.status === TaskStatus.DONE ? 'border-l-emerald-500' :
-                              task.status === TaskStatus.NOT_STARTED ? 'border-l-error' :
-                                task.status === TaskStatus.CANCELLED ? 'border-l-on-surface-variant' : 'border-l-on-surface-variant/30'
+                            task.status === TaskStatus.NOT_STARTED ? 'border-l-error' :
+                              task.status === TaskStatus.CANCELLED ? 'border-l-on-surface-variant' : 'border-l-on-surface-variant/30'
                             }`}
                         >
                           <div className="flex items-center justify-between md:w-32 flex-shrink-0">
@@ -234,7 +283,7 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
                               <ChevronRight size={16} className="text-on-surface-variant/30" />
                             </div>
                           </div>
- 
+
                           <div className="flex-1 flex flex-col gap-0.5 md:gap-1">
                             <h3 className="text-sm md:text-base font-black text-on-surface leading-tight md:leading-snug group-hover:text-primary transition-colors">
                               {task.title}
@@ -291,6 +340,13 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
           );
         })}
       </div>
+      {showShiftModal && (
+        <ShiftScheduleImportModal
+          onClose={() => setShowShiftModal(false)}
+          onImport={handleImportShiftSchedule}
+          currentMonth={currentMonthForShift}
+        />
+      )}
       <InstallGuide />
     </div>
   );

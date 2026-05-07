@@ -31,4 +31,12 @@ export interface RecurringRule {
   performer: string;
 }
 
+export interface ShiftSchedule {
+  id: string;
+  month: string; // Format: YYYY-MM
+  personName: string;
+  date: number; // 1-31
+  shiftType: string; // X, D, X1, X2, CN, T, T2, etc.
+}
+
 export type ViewType = 'DASHBOARD';

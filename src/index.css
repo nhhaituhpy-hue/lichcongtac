@@ -3,7 +3,6 @@
 
 @theme {
   --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
-  
   --color-surface: #f9f9ff;
   --color-surface-dim: #d9d9e1;
   --color-surface-bright: #f9f9ff;
@@ -12,25 +11,19 @@
   --color-surface-container: #ededf5;
   --color-surface-container-high: #e7e8ef;
   --color-surface-container-highest: #e2e2e9;
-  
   --color-on-surface: #191c21;
   --color-on-surface-variant: #424751;
-  
   --color-primary: #00346f;
   --color-on-primary: #ffffff;
   --color-primary-container: #004a99;
-  
   --color-secondary: #505f76;
   --color-on-secondary: #ffffff;
   --color-secondary-container: #d0e1fb;
-  
   --color-error: #ba1a1a;
   --color-on-error: #ffffff;
   --color-error-container: #ffdad6;
-
   --color-success: #10b981;
   --color-warning: #f59e0b;
-
   --radius-xl: 1.5rem;
   --radius-lg: 1rem;
   --radius-md: 0.75rem;
