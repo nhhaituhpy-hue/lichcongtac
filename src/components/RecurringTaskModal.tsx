@@ -50,7 +50,7 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
 
   // Fixed Day states
   const [titleFixed, setTitleFixed] = useState('');
-  const [dayOfMonth, setDayOfMonth] = useState<number>();
+  const [dayOfMonth, setDayOfMonth] = useState<number | undefined>(1);
   const [isLastDay, setIsLastDay] = useState(false);
 
   // Quick Report states
@@ -230,8 +230,12 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                             min="1"
                             max="31"
                             disabled={isLastDay}
-                            value={dayOfMonth}
-                            onChange={(e) => setDayOfMonth(parseInt(e.target.value, 10) || 1)}
+                            value={dayOfMonth ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setDayOfMonth(val === '' ? undefined : parseInt(val, 10));
+                            }}
+                            placeholder="1"
                             className="w-full bg-surface border border-surface-container rounded-xl pl-10 pr-4 py-3 text-base font-bold focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none disabled:opacity-50 disabled:bg-surface-container-highest transition-all"
                           />
                         </div>
@@ -281,8 +285,12 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                             min="1"
                             max="31"
                             disabled={isLastDay}
-                            value={dayOfMonth}
-                            onChange={(e) => setDayOfMonth(parseInt(e.target.value, 10) || 1)}
+                            value={dayOfMonth ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setDayOfMonth(val === '' ? undefined : parseInt(val, 10));
+                            }}
+                            placeholder="1"
                             className="w-full bg-surface border border-surface-container rounded-xl pl-10 pr-4 py-3 text-base font-bold focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none disabled:opacity-50 disabled:bg-surface-container-highest transition-all"
                           />
                         </div>

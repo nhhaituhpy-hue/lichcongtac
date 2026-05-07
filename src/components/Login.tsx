@@ -106,7 +106,7 @@ export default function Login({ onLogin }: LoginProps) {
         </div>
 
         <p className="text-center mt-8 text-on-surface-variant/30 text-[10px] font-bold uppercase tracking-[0.2em]">
-          Technical Support: DVOR/DME Team
+          Technical Support: Nguyễn Hoàng Hải
         </p>
       </motion.div>
     </div>
