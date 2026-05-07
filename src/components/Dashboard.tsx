@@ -234,10 +234,16 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
                       {getShiftForDate(day.key)
                         .sort((a, b) => getShiftPriority(a.shiftType) - getShiftPriority(b.shiftType))
                         .map((shift) => (
-                          <div key={shift.id} className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-full border border-blue-200 text-[10px] md:text-[11px] font-bold text-on-surface">
-                            <span className="text-blue-900">{shift.personName}</span>
-                            <span className="text-blue-500">-</span>
-                            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-900 rounded-full font-black text-[9px]">{getShiftDisplayName(shift.shiftType)}</span>
+                          <div key={shift.id} className={`flex items-center gap-1.5 px-2 py-1 bg-white rounded-full border text-[10px] md:text-[11px] font-bold text-on-surface ${
+                            shift.shiftType === 'X' ? 'border-red-200' : 'border-blue-200'
+                          }`}>
+                            <span className={shift.shiftType === 'X' ? 'text-red-900' : 'text-blue-900'}>{shift.personName}</span>
+                            <span className={shift.shiftType === 'X' ? 'text-red-400' : 'text-blue-500'}>-</span>
+                            <span className={`px-1.5 py-0.5 rounded-full font-black text-[9px] ${
+                              shift.shiftType === 'X' ? 'bg-red-50 text-[#8B0000]' : 'bg-blue-100 text-blue-900'
+                            }`}>
+                              {getShiftDisplayName(shift.shiftType)}
+                            </span>
                           </div>
                         ))}
                     </div>
