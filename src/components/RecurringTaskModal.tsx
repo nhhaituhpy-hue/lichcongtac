@@ -50,9 +50,9 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
 
   // Fixed Day states
   const [titleFixed, setTitleFixed] = useState('');
-  const [dayOfMonth, setDayOfMonth] = useState<number>(1);
+  const [dayOfMonth, setDayOfMonth] = useState<number>();
   const [isLastDay, setIsLastDay] = useState(false);
-  
+
   // Quick Report states
   const [selectedReport, setSelectedReport] = useState(REPORT_TYPES[0]);
 
@@ -236,11 +236,11 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
                           />
                         </div>
                       </div>
-                      
+
                       <label className="flex items-center gap-3 cursor-pointer group">
                         <div className="relative">
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             checked={isLastDay}
                             onChange={(e) => setIsLastDay(e.target.checked)}
                             className="peer sr-only"
@@ -290,8 +290,8 @@ export default function RecurringTaskModal({ isOpen, onClose, onSave }: Recurrin
 
                       <label className="flex items-center gap-3 cursor-pointer group">
                         <div className="relative">
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             checked={isLastDay}
                             onChange={(e) => setIsLastDay(e.target.checked)}
                             className="peer sr-only"
