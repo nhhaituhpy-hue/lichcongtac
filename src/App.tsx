@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Task, TaskStatus, ShiftSchedule } from './types.ts';
+import { Task, TaskStatus, ShiftSchedule, DailyNote } from './types.ts';
 
 // Components
 import Dashboard from './components/Dashboard';
@@ -21,6 +21,7 @@ const LOCAL_STORAGE_KEY = 'dvor_tasks_data';
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [shiftSchedules, setShiftSchedules] = useState<ShiftSchedule[]>([]);
+  const [dailyNotes, setDailyNotes] = useState<DailyNote[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
@@ -128,6 +129,22 @@ export default function App() {
     }
   }, []);
 
+  const fetchDailyNotes = useCallback(async (startDate?: string, endDate?: string) => {
+    try {
+      let url = `/api/daily-notes?t=${Date.now()}`;
+      if (startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`;
+      }
+      const response = await fetch(url);
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setDailyNotes(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch daily notes:', e);
+    }
+  }, []);
+
   const fetchSchedulesForVisibleRange = useCallback(() => {
     const [year, week] = selectedWeek.split('-W');
     const days = getDaysFromWeek(year, week);
@@ -139,12 +156,14 @@ export default function App() {
     syncInternetTime();
     fetchTasks();
     fetchShiftSchedules();
+    fetchDailyNotes();
 
     // Periodically fetch tasks for real-time updates (every 5 seconds)
     const pollInterval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         fetchTasks();
         fetchSchedulesForVisibleRange();
+        fetchDailyNotes();
       }
     }, 5000);
 
@@ -153,6 +172,7 @@ export default function App() {
       if (document.visibilityState === 'visible') {
         fetchTasks();
         fetchSchedulesForVisibleRange();
+        fetchDailyNotes();
       }
     };
     document.addEventListener('visibilitychange', handleRefresh);
@@ -272,6 +292,34 @@ export default function App() {
       console.error('Update failed:', e);
       setSyncStatus('SAVED');
       alert('Có lỗi xảy ra khi cập nhật công việc.');
+    }
+  };
+
+  const handleUpdateDailyNote = async (date: string, content: string) => {
+    setSyncStatus('SAVING');
+    try {
+      const noteId = `note-${date}`;
+      const response = await fetch('/api/daily-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: noteId, date, content })
+      });
+
+      if (!response.ok) throw new Error('Update failed');
+
+      setDailyNotes(prev => {
+        const existing = prev.find(n => n.date === date);
+        if (existing) {
+          return prev.map(n => n.date === date ? { ...n, content } : n);
+        } else {
+          return [...prev, { id: noteId, date, content }];
+        }
+      });
+      setSyncStatus('SAVED');
+      setLastSyncTime(getNow());
+    } catch (e) {
+      console.error('Update failed:', e);
+      setSyncStatus('SAVED');
     }
   };
 
@@ -479,6 +527,8 @@ export default function App() {
                 onImportShiftSchedule={handleImportShiftSchedule}
                 selectedWeek={selectedWeek}
                 onWeekChange={setSelectedWeek}
+                dailyNotes={dailyNotes}
+                onUpdateDailyNote={handleUpdateDailyNote}
               />
             </motion.div>
           </AnimatePresence>

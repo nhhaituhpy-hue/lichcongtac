@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Plus, Clock, Users, Cloud, Calendar, ChevronLeft, ChevronRight, Trash2, Settings, LogOut, FileText } from 'lucide-react';
-import { Task, TaskStatus, ShiftSchedule } from '../types.ts';
+import { Plus, Clock, Users, Cloud, Calendar, ChevronLeft, ChevronRight, Trash2, Settings, LogOut, FileText, StickyNote } from 'lucide-react';
+import { Task, TaskStatus, ShiftSchedule, DailyNote } from '../types.ts';
 import { motion } from 'framer-motion';
 import { getNow, getVietnamTodayKey, getDaysFromWeek, getCurrentWeek } from '../utils/timeUtils';
 import InstallGuide from './InstallGuide';
 import ShiftScheduleImportModal from './ShiftScheduleImportModal';
+import NavaidWidget from './NavaidWidget';
 
 interface DashboardProps {
   tasks: Task[];
@@ -20,6 +21,8 @@ interface DashboardProps {
   onImportShiftSchedule?: (schedules: ShiftSchedule[]) => void;
   selectedWeek: string;
   onWeekChange: (week: string) => void;
+  dailyNotes?: DailyNote[];
+  onUpdateDailyNote?: (date: string, content: string) => void;
 }
 
 
@@ -39,7 +42,57 @@ const StatusBadge = ({ status }: { status: TaskStatus }) => {
   );
 };
 
-export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskClick, onOpenRecurringModal, onLogout, userRole, syncStatus, lastSyncTime, shiftSchedules = [], onImportShiftSchedule, selectedWeek, onWeekChange }: DashboardProps) {
+const DailyNoteEntry = ({ date, note, onUpdate }: { date: string, note?: string, onUpdate: (date: string, content: string) => void }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [content, setContent] = useState(note || '');
+
+  useEffect(() => {
+    setContent(note || '');
+  }, [note]);
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    if (content !== (note || '')) {
+      onUpdate(date, content);
+    }
+  };
+
+  return (
+    <div className="px-4 md:px-5 py-2 md:py-3 bg-[#FFF9C4]/30 border-b border-yellow-100 flex items-center gap-3 group transition-colors hover:bg-[#FFF9C4]/50">
+      <div className="flex-shrink-0 text-yellow-700/60">
+        <StickyNote size={18} />
+      </div>
+      <div className="flex-1">
+        {isEditing ? (
+          <input
+            autoFocus
+            className="w-full bg-transparent border-none outline-none text-xs md:text-sm font-bold text-yellow-900 placeholder:text-yellow-700/30"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleBlur();
+              if (e.key === 'Escape') {
+                setIsEditing(false);
+                setContent(note || '');
+              }
+            }}
+            placeholder="Thêm ghi chú nhanh..."
+          />
+        ) : (
+          <div 
+            onClick={() => setIsEditing(true)}
+            className="w-full text-xs md:text-sm font-bold text-[#8B5E3C] cursor-text min-h-[20px] flex items-center"
+          >
+            {content || <span className="text-yellow-700/30 font-medium italic">Chạm để thêm ghi chú...</span>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskClick, onOpenRecurringModal, onLogout, userRole, syncStatus, lastSyncTime, shiftSchedules = [], onImportShiftSchedule, selectedWeek, onWeekChange, dailyNotes = [], onUpdateDailyNote }: DashboardProps) {
   const [yearStr, weekStr] = selectedWeek.split('-W');
   const displayWeek = weekStr || '42';
   const DAYS = getDaysFromWeek(yearStr, weekStr);
@@ -250,6 +303,13 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
                   </div>
                 </div>
               )}
+              
+              {/* Daily Note Section */}
+              <DailyNoteEntry 
+                date={day.key} 
+                note={dailyNotes.find(n => n.date === day.key)?.content}
+                onUpdate={onUpdateDailyNote || (() => {})}
+              />
 
               {/* Task Grid */}
               <div className="p-3 md:p-4 flex flex-col gap-3">
@@ -354,6 +414,7 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
         />
       )}
       <InstallGuide />
+      <NavaidWidget />
     </div>
   );
 }

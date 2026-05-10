@@ -39,4 +39,12 @@ export interface ShiftSchedule {
   shiftType: string; // X, D, X1, X2, CN, T, T2, etc.
 }
 
+export interface DailyNote {
+  id: string;
+  date: string; // YYYY-MM-DD
+  content: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export type ViewType = 'DASHBOARD';
