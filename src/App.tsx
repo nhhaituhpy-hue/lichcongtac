@@ -72,9 +72,13 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<'SAVING' | 'SAVED'>('SAVED');
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
-  const fetchTasks = useCallback(async () => {
+  const fetchTasks = useCallback(async (startDate?: string, endDate?: string) => {
     try {
-      const response = await fetch(`/api/tasks?t=${Date.now()}`, {
+      let url = `/api/tasks?t=${Date.now()}`;
+      if (startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`;
+      }
+      const response = await fetch(url, {
         cache: 'no-store',
         headers: {
           'Pragma': 'no-cache',
@@ -99,17 +103,22 @@ export default function App() {
     }
   }, []); // Stable reference
 
-  const fetchShiftSchedules = useCallback(async (monthParam?: string) => {
+  const fetchShiftSchedules = useCallback(async (monthParam?: string, startDate?: string, endDate?: string) => {
     try {
-      let monthStr = monthParam;
-      if (!monthStr) {
+      let url = `/api/shift-schedules?t=${Date.now()}`;
+      
+      if (startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`;
+      } else if (monthParam) {
+        url += `&month=${monthParam}`;
+      } else {
         const now = getNow();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const year = now.getFullYear();
-        monthStr = `${year}-${month}`;
+        url += `&month=${year}-${month}`;
       }
 
-      const response = await fetch(`/api/shift-schedules?month=${monthStr}&t=${Date.now()}`, {
+      const response = await fetch(url, {
         cache: 'no-store',
         headers: {
           'Pragma': 'no-cache',
@@ -119,9 +128,22 @@ export default function App() {
       const data = await response.json();
       if (Array.isArray(data)) {
         setShiftSchedules(prev => {
-          // Merge data: keep schedules for other months, replace for this month
-          const filtered = prev.filter(s => s.month !== monthStr);
-          return [...filtered, ...data];
+          if (startDate && endDate) {
+            // Complex merge for date range: remove existing in that range and add new
+            // For simplicity, we can just filter by the months involved if it's easier,
+            // or just replace entirely if the app is week-based.
+            // But let's just merge by ID for now or replace the whole state if it's small.
+            // Actually, the previous logic was month-based.
+            // Let's replace the schedules that fall within the fetched months.
+            const startMonth = startDate.substring(0, 7);
+            const endMonth = endDate.substring(0, 7);
+            const filtered = prev.filter(s => s.month !== startMonth && s.month !== endMonth);
+            return [...filtered, ...data];
+          } else if (monthParam) {
+            const filtered = prev.filter(s => s.month !== monthParam);
+            return [...filtered, ...data];
+          }
+          return data;
         });
       }
     } catch (e) {
@@ -145,34 +167,34 @@ export default function App() {
     }
   }, []);
 
-  const fetchSchedulesForVisibleRange = useCallback(() => {
+  const fetchAllDataForRange = useCallback(() => {
     const [year, week] = selectedWeek.split('-W');
     const days = getDaysFromWeek(year, week);
-    const months = Array.from(new Set(days.map(d => d.month)));
-    months.forEach(m => fetchShiftSchedules(m));
-  }, [selectedWeek, fetchShiftSchedules]);
+    if (days.length === 0) return;
+    
+    const startDate = days[0].key;
+    const endDate = days[6].key;
+
+    fetchTasks(startDate, endDate);
+    fetchDailyNotes(startDate, endDate);
+    fetchShiftSchedules(undefined, startDate, endDate);
+  }, [selectedWeek, fetchTasks, fetchDailyNotes, fetchShiftSchedules]);
 
   useEffect(() => {
     syncInternetTime();
-    fetchTasks();
-    fetchShiftSchedules();
-    fetchDailyNotes();
+    fetchAllDataForRange();
 
-    // Periodically fetch tasks for real-time updates (every 5 seconds)
+    // Periodically fetch data for real-time updates (every 30 seconds)
     const pollInterval = setInterval(() => {
       if (document.visibilityState === 'visible') {
-        fetchTasks();
-        fetchSchedulesForVisibleRange();
-        fetchDailyNotes();
+        fetchAllDataForRange();
       }
-    }, 5000);
+    }, 30000);
 
     // Refresh immediately when tab becomes visible or focused
     const handleRefresh = () => {
       if (document.visibilityState === 'visible') {
-        fetchTasks();
-        fetchSchedulesForVisibleRange();
-        fetchDailyNotes();
+        fetchAllDataForRange();
       }
     };
     document.addEventListener('visibilitychange', handleRefresh);
@@ -195,7 +217,7 @@ export default function App() {
       document.removeEventListener('visibilitychange', handleRefresh);
       window.removeEventListener('focus', handleRefresh);
     };
-  }, [fetchTasks, fetchSchedulesForVisibleRange]);
+  }, [fetchTasks, fetchAllDataForRange]);
 
   const handleDeleteTask = async (taskId: string) => {
     setSyncStatus('SAVING');

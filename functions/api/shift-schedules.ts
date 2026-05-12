@@ -11,24 +11,35 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if (request.method === "GET") {
     try {
       const month = url.searchParams.get("month");
+      const startDateStr = url.searchParams.get("startDate");
+      const endDateStr = url.searchParams.get("endDate");
+
       let query = "SELECT * FROM shift_schedules";
+      let params: any[] = [];
       
-      if (month) {
+      if (startDateStr && endDateStr) {
+        // Logic for filtering by date range across months
+        const start = startDateStr.split('-'); // [YYYY, MM, DD]
+        const end = endDateStr.split('-');     // [YYYY, MM, DD]
+        
+        const startMonth = `${start[0]}-${start[1]}`;
+        const startDay = parseInt(start[2]);
+        const endMonth = `${end[0]}-${end[1]}`;
+        const endDay = parseInt(end[2]);
+
+        if (startMonth === endMonth) {
+          query += " WHERE month = ? AND date BETWEEN ? AND ?";
+          params.push(startMonth, startDay, endDay);
+        } else {
+          query += " WHERE (month = ? AND date >= ?) OR (month = ? AND date <= ?)";
+          params.push(startMonth, startDay, endMonth, endDay);
+        }
+      } else if (month) {
         query += " WHERE month = ?";
-        const { results } = await env.DB.prepare(query).bind(month).all();
-        const formattedResults = results.map((s: any) => ({
-          id: s.id,
-          month: s.month,
-          personName: s.person_name,
-          date: s.date,
-          shiftType: s.shift_type
-        }));
-        return new Response(JSON.stringify(formattedResults), {
-          headers: { "Content-Type": "application/json" },
-        });
+        params.push(month);
       }
 
-      const { results } = await env.DB.prepare(query).all();
+      const { results } = await env.DB.prepare(query).bind(...params).all();
       const formattedResults = results.map((s: any) => ({
         id: s.id,
         month: s.month,

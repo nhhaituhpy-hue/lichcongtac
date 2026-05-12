@@ -9,7 +9,21 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   if (request.method === "GET") {
     try {
-      const { results } = await env.DB.prepare("SELECT * FROM tasks").all();
+      const startDate = url.searchParams.get("startDate");
+      const endDate = url.searchParams.get("endDate");
+
+      let query = "SELECT * FROM tasks";
+      let params: any[] = [];
+
+      if (startDate && endDate) {
+        query += " WHERE date BETWEEN ? AND ?";
+        params.push(startDate, endDate);
+      } else {
+        // Fallback for backward compatibility or general overview
+        // We could limit this to a certain range if needed
+      }
+
+      const { results } = await env.DB.prepare(query).bind(...params).all();
       // Personnel is stored as a string, need to parse if it was JSON or just split if comma-separated
       // Our frontend expects an array of strings.
       const formattedResults = results.map((task: any) => ({
