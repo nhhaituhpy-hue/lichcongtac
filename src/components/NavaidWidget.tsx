@@ -309,9 +309,20 @@ const DeviceCard = ({ title, type, deviceData, onParamClick }: any) => {
     ["RF Level", deviceData?.RFLevel, "dB"], ["Antenna", deviceData?.Antenna, ""],
   ];
   const dmeParams = [
+<<<<<<< Updated upstream
     ["Delay", deviceData?.Delay, "µs"], ["Spacing", deviceData?.Spacing, "µs"],
     ["Tx Power", deviceData?.TxPower, "W"], ["ERP", deviceData?.ERP != null ? (Number(deviceData.ERP)/10).toFixed(1) : null, "dB"],
     ["Efficiency", deviceData?.Efficiency, "%"], ["PRF", deviceData?.PRF, "ppps"],
+=======
+    ["Load", deviceData?.Load, ""],
+    ["Delay", deviceData?.Delay, "µs"],
+    ["Spacing", deviceData?.Spacing, "µs"],
+    ["Tx Power", deviceData?.TxPower, "W"],
+    ["ERP", deviceData?.ERP != null ? (Number(deviceData.ERP) / 10).toFixed(1) : null, "dB"],
+    ["Efficiency", deviceData?.Efficiency, "%"],
+    ["PRF", deviceData?.PRF, "ppps"],
+    ["Alert", deviceData?.Alert, ""],
+>>>>>>> Stashed changes
   ];
   const params = type === 'vor' ? vorParams : dmeParams;
 
