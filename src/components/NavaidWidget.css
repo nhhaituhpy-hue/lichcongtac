@@ -145,6 +145,48 @@
 .nav-btn-cancel { background: rgba(255,255,255,0.1); color: var(--nav-text); }
 .nav-btn-cancel:hover { background: rgba(255,255,255,0.15); }
 
+.settings-tabs {
+  display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--nav-border);
+  padding-bottom: 8px;
+}
+.settings-tabs button {
+  background: none; border: none; color: var(--nav-muted); padding: 6px 12px;
+  font-family: var(--nav-font); font-size: 11px; font-weight: 700; cursor: pointer;
+  border-radius: 4px; transition: all 0.2s;
+}
+.settings-tabs button.active { background: rgba(0,200,160,0.15); color: var(--nav-accent-vor); }
+.settings-tabs button:hover:not(.active) { color: var(--nav-text); background: rgba(255,255,255,0.05); }
+
+.settings-label { display: block; font-size: 10px; color: var(--nav-muted); text-transform: uppercase; margin-bottom: 6px; font-weight: 700; }
+
+.push-status-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-top: 1px solid var(--nav-border); margin-top: 8px;
+  font-size: 11px;
+}
+.btn-subscribe {
+  background: var(--nav-accent-vor); color: #000; border: none; padding: 5px 10px;
+  border-radius: 4px; font-weight: 700; font-size: 10px; cursor: pointer;
+  display: flex; align-items: center; gap: 4px;
+}
+
+.limits-settings { display: flex; flex-direction: column; gap: 12px; }
+.limits-list { max-height: 300px; overflow-y: auto; padding-right: 8px; }
+.limit-item {
+  background: rgba(255,255,255,0.03); border: 1.5px solid var(--nav-border);
+  border-radius: 8px; padding: 10px; margin-bottom: 8px;
+}
+.limit-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.limit-name { font-size: 11px; font-weight: 700; color: var(--nav-text); }
+.limit-inputs { display: flex; align-items: center; gap: 8px; }
+.limit-inputs input {
+  width: 70px; background: #000; border: 1px solid var(--nav-border);
+  color: var(--nav-accent-vor); padding: 4px 6px; font-size: 12px;
+  font-family: var(--nav-font); border-radius: 4px; text-align: center;
+}
+.limit-inputs .unit { font-size: 10px; color: var(--nav-muted); }
+
+
 /* ── Meta bar ── */
 .nav-meta {
   display: flex; align-items:center; gap:16px;

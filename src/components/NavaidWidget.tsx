@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Check, X } from 'lucide-react';
+import { Settings, Check, X, Bell, BellOff, AlertTriangle, ShieldAlert } from 'lucide-react';
 import './NavaidWidget.css';
 
 // Access ApexCharts from window
@@ -42,6 +42,10 @@ const NavaidWidget: React.FC = () => {
   
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [isChartLoading, setIsChartLoading] = useState(false);
+  
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [limits, setLimits] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'api' | 'limits'>('api');
   
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const chartRef = useRef<HTMLDivElement | null>(null);
@@ -89,6 +93,64 @@ const NavaidWidget: React.FC = () => {
   useEffect(() => {
     if (selectedParam) fetchHistory(selectedParam);
   }, [selectedParam]);
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.pushManager.getSubscription().then(sub => {
+          setIsSubscribed(!!sub);
+        });
+      });
+    }
+    fetchLimits();
+  }, []);
+
+  const fetchLimits = async () => {
+    try {
+      const res = await fetch('/api/navaid-limits');
+      const data = await res.json();
+      setLimits(Array.isArray(data) ? data : []);
+    } catch (e) { console.error("Failed to fetch limits", e); }
+  };
+
+  const handleSubscribe = async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return;
+
+      const reg = await navigator.serviceWorker.ready;
+      // VAPID key should be provided by the user in env or settings
+      // Using a placeholder for now - User must replace this or it will fail
+      const VAPID_PUBLIC_KEY = "BPYZysmdIBpeaNA6eHGp95LyX--OBHsOX10sUinDTJ5j_Gz06hUlRckWHb9Q7knkMHPkAXV6hYS_iHYZo6l6RMY"; 
+      
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: VAPID_PUBLIC_KEY
+      });
+
+      await fetch('/api/push-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub })
+      });
+      setIsSubscribed(true);
+      alert("Đã đăng ký nhận thông báo thành công!");
+    } catch (err) {
+      console.error("Subscription failed", err);
+      alert("Lỗi đăng ký: " + (err as Error).message);
+    }
+  };
+
+  const handleSaveLimits = async () => {
+    try {
+      await fetch('/api/navaid-limits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(limits)
+      });
+      alert("Đã lưu giới hạn thành công!");
+    } catch (e) { alert("Lỗi lưu giới hạn"); }
+  };
 
   // ApexCharts Integration
   useEffect(() => {
@@ -252,11 +314,69 @@ const NavaidWidget: React.FC = () => {
 
             {showSettings && (
               <div className="nav-settings-panel">
-                <input type="text" className="nav-settings-input" value={tempUrl} onChange={(e) => setTempUrl(e.target.value)} />
-                <div className="nav-settings-actions">
-                  <button className="nav-btn-save" onClick={handleSaveUrl}><Check size={14} /> Lưu</button>
-                  <button className="nav-btn-cancel" onClick={() => setShowSettings(false)}><X size={14} /> Hủy</button>
+                <div className="settings-tabs">
+                  <button className={activeTab === 'api' ? 'active' : ''} onClick={() => setActiveTab('api')}>Kết nối</button>
+                  <button className={activeTab === 'limits' ? 'active' : ''} onClick={() => setActiveTab('limits')}>Ngưỡng cảnh báo</button>
                 </div>
+
+                {activeTab === 'api' ? (
+                  <>
+                    <label className="settings-label">URL API Giám sát</label>
+                    <input type="text" className="nav-settings-input" value={tempUrl} onChange={(e) => setTempUrl(e.target.value)} />
+                    <div className="push-status-row">
+                      <span>Thông báo Push: <b>{isSubscribed ? 'Đã bật' : 'Chưa bật'}</b></span>
+                      {!isSubscribed && <button className="btn-subscribe" onClick={handleSubscribe}><Bell size={14} /> Bật thông báo</button>}
+                    </div>
+                    <div className="nav-settings-actions">
+                      <button className="nav-btn-save" onClick={handleSaveUrl}><Check size={14} /> Lưu cấu hình</button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="limits-settings">
+                    <div className="limits-list">
+                      {Object.keys(chartConfigs).map(param => {
+                        const limit = limits.find(l => l.param_name === param) || { param_name: param, min_val: chartConfigs[param].min, max_val: chartConfigs[param].max, enabled: 0 };
+                        return (
+                          <div key={param} className="limit-item">
+                            <div className="limit-header">
+                              <span className="limit-name">{param}</span>
+                              <input type="checkbox" checked={!!limit.enabled} onChange={(e) => {
+                                const newLimits = [...limits];
+                                const idx = newLimits.findIndex(l => l.param_name === param);
+                                if (idx > -1) newLimits[idx].enabled = e.target.checked ? 1 : 0;
+                                else newLimits.push({ ...limit, enabled: e.target.checked ? 1 : 0 });
+                                setLimits(newLimits);
+                              }} />
+                            </div>
+                            <div className="limit-inputs">
+                              <input type="number" step="any" inputMode="decimal" value={limit.min_val ?? ''} onChange={(e) => {
+                                const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                const newLimits = [...limits];
+                                const idx = newLimits.findIndex(l => l.param_name === param);
+                                if (idx > -1) newLimits[idx].min_val = val;
+                                else newLimits.push({ ...limit, min_val: val });
+                                setLimits(newLimits);
+                              }} placeholder="Min" />
+                              <span>-</span>
+                              <input type="number" step="any" inputMode="decimal" value={limit.max_val ?? ''} onChange={(e) => {
+                                const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                const newLimits = [...limits];
+                                const idx = newLimits.findIndex(l => l.param_name === param);
+                                if (idx > -1) newLimits[idx].max_val = val;
+                                else newLimits.push({ ...limit, max_val: val });
+                                setLimits(newLimits);
+                              }} placeholder="Max" />
+                              <span className="unit">{chartConfigs[param].unit}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="nav-settings-actions">
+                      <button className="nav-btn-save" onClick={handleSaveLimits}><Check size={14} /> Lưu ngưỡng</button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -309,11 +429,6 @@ const DeviceCard = ({ title, type, deviceData, onParamClick }: any) => {
     ["RF Level", deviceData?.RFLevel, "dB"], ["Antenna", deviceData?.Antenna, ""],
   ];
   const dmeParams = [
-<<<<<<< Updated upstream
-    ["Delay", deviceData?.Delay, "µs"], ["Spacing", deviceData?.Spacing, "µs"],
-    ["Tx Power", deviceData?.TxPower, "W"], ["ERP", deviceData?.ERP != null ? (Number(deviceData.ERP)/10).toFixed(1) : null, "dB"],
-    ["Efficiency", deviceData?.Efficiency, "%"], ["PRF", deviceData?.PRF, "ppps"],
-=======
     ["Load", deviceData?.Load, ""],
     ["Delay", deviceData?.Delay, "µs"],
     ["Spacing", deviceData?.Spacing, "µs"],
@@ -322,7 +437,6 @@ const DeviceCard = ({ title, type, deviceData, onParamClick }: any) => {
     ["Efficiency", deviceData?.Efficiency, "%"],
     ["PRF", deviceData?.PRF, "ppps"],
     ["Alert", deviceData?.Alert, ""],
->>>>>>> Stashed changes
   ];
   const params = type === 'vor' ? vorParams : dmeParams;
 
