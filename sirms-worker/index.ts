@@ -5,7 +5,7 @@ interface Env {
   VAPID_SUBJECT: string; // usually mailto:your@email.com
 }
 
-const TUNNEL_URL = "https://morale-delivery-chirping.ngrok-free.dev/navaid";
+const TUNNEL_URL = "https://sirms-api.hainh.io.vn/navaid";
 
 export default {
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
@@ -21,9 +21,12 @@ export default {
 async function handleSchedule(env: Env) {
   try {
     const response = await fetch(TUNNEL_URL, {
-      headers: { "ngrok-skip-browser-warning": "true" }
+      headers: {
+        "ngrok-skip-browser-warning": "true",
+        "authorization": "nguyenhoanghai1992"
+      }
     });
-    
+
     if (!response.ok) return;
 
     const json: any = await response.json();
@@ -44,7 +47,8 @@ async function handleSchedule(env: Env) {
 
     // 2. Cleanup old data
     await env.DB.prepare("DELETE FROM sirms_data WHERE timestamp < datetime('now', '-48 hours')").run();
-    
+    await env.DB.prepare("DELETE FROM notification_logs WHERE last_sent_at < datetime('now', '-7 days')").run();
+
     // 3. Threshold Check & Notifications
     await checkThresholds(env, { ...dvor, ...dme });
 
@@ -54,6 +58,13 @@ async function handleSchedule(env: Env) {
     console.error("Worker error:", err);
   }
 }
+
+const TIER_CONFIG: any = {
+  "Mod 30Hz": { maxTier: 2, step: 1 },
+  "Mod 9960Hz": { maxTier: 2, step: 1 },
+  "Deviation": { maxTier: 1, step: 1 },
+  "RF Level": { maxTier: 1, step: 1 }
+};
 
 async function checkThresholds(env: Env, currentData: any) {
   const { results: limits } = await env.DB.prepare("SELECT * FROM navaid_limits WHERE enabled = 1").all();
@@ -68,7 +79,7 @@ async function checkThresholds(env: Env, currentData: any) {
     "Delay": currentData.Delay,
     "Spacing": currentData.Spacing,
     "Tx Power": currentData.TxPower,
-    "ERP": currentData.ERP != null ? currentData.ERP / 10 : null,
+    "ERP": currentData.ERP,
     "Efficiency": currentData.Efficiency
   };
 
@@ -77,32 +88,55 @@ async function checkThresholds(env: Env, currentData: any) {
     if (val === null || val === undefined) continue;
 
     if (val < limit.min_val || val > limit.max_val) {
+      const isHigh = val > limit.max_val;
+      const diff = isHigh ? val - limit.max_val : limit.min_val - val;
+      const config = TIER_CONFIG[limit.param_name];
+      let currentTier = 0;
+
+      if (config) {
+        currentTier = Math.min(config.maxTier, Math.floor(diff / config.step));
+      }
+
+      const logKey = `${limit.param_name}#tier${currentTier}`;
+
       // Violation! Check log
       const lastNotify = await env.DB.prepare("SELECT last_sent_at FROM notification_logs WHERE param_name = ? ORDER BY last_sent_at DESC LIMIT 1")
-        .bind(limit.param_name).first<any>();
+        .bind(logKey).first<any>();
 
       const now = new Date();
       const shouldNotify = !lastNotify || (now.getTime() - new Date(lastNotify.last_sent_at).getTime() > 12 * 60 * 60 * 1000);
 
       if (shouldNotify) {
-        const sentCount = await sendAlert(env, limit.param_name, val, limit.min_val, limit.max_val);
+        const sentCount = await sendAlert(env, limit.param_name, val, limit.min_val, limit.max_val, currentTier, isHigh);
         if (sentCount > 0) {
-          await env.DB.prepare("INSERT INTO notification_logs (param_name) VALUES (?)").bind(limit.param_name).run();
+          await env.DB.prepare("INSERT INTO notification_logs (param_name) VALUES (?)").bind(logKey).run();
         }
       }
     }
   }
 }
 
-async function sendAlert(env: Env, param: string, val: number, min: number, max: number) {
+async function sendAlert(env: Env, param: string, val: number, min: number, max: number, tier: number, isHigh: boolean) {
+  const direction = isHigh ? "vượt ngưỡng trên" : "thấp dưới ngưỡng";
+  let tierPrefix = "⚠️ [ALERT]";
+  let tierDesc = "";
+
+  if (tier === 1) {
+    tierPrefix = "🚨 [ALARM]";
+    tierDesc = " (Nghiêm trọng)";
+  } else if (tier === 2) {
+    tierPrefix = "🔥 [ALARM CRITICAL]";
+    tierDesc = " (Cực kỳ nghiêm trọng)";
+  }
+
   const payload = JSON.stringify({
-    title: "⚠️ Cảnh báo SIRMS",
-    body: `Tham số ${param} vượt ngưỡng: ${val.toFixed(2)} (Cho phép: ${min}-${max})`
+    title: `${tierPrefix} SIRMS`,
+    body: `Tham số ${param} ${direction}${tierDesc}: ${val.toFixed(2)} (Cho phép: ${min}-${max})`
   });
 
   const { results: subs } = await env.DB.prepare("SELECT subscription_json FROM push_subscriptions").all();
   console.log(`Found ${subs?.length || 0} subscriptions to notify.`);
-  
+
   let successCount = 0;
   for (const sub of (subs as any[])) {
     try {
@@ -119,10 +153,10 @@ async function sendAlert(env: Env, param: string, val: number, min: number, max:
 // Minimal Web Push Implementation for Workers
 async function sendPushNotification(env: Env, subscription: any, payload: string) {
   const { endpoint } = subscription;
-  
+
   // VAPID Authentication Header
   const jwt = await createVapidJWT(env, endpoint);
-  
+
   // Apple/Safari often require the 'vapid' scheme and explicit public key
   const authHeader = `vapid t=${jwt}, k=${env.VAPID_PUBLIC_KEY}`;
 
@@ -165,7 +199,7 @@ function decodeBase64Url(str: string) {
 async function createVapidJWT(env: Env, endpoint: string) {
   const origin = new URL(endpoint).origin;
   const expiry = Math.floor(Date.now() / 1000) + 12 * 60 * 60; // 12h
-  
+
   const header = { alg: "ES256", typ: "JWT" };
   const payload = {
     aud: origin,
@@ -177,7 +211,7 @@ async function createVapidJWT(env: Env, endpoint: string) {
     const str = typeof buf === 'string' ? btoa(buf) : btoa(String.fromCharCode(...buf));
     return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
   };
-  
+
   // Specialized b64Url for raw binary (no double encoding)
   const b64UrlRaw = (buf: Uint8Array) => {
     const str = btoa(String.fromCharCode(...buf));

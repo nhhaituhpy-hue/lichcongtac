@@ -96,8 +96,8 @@ def parse_dme(raw: dict) -> dict:
         "Spacing":    safe_float(raw.get("Spacing", "0"), 100),
         # TxPower: "1061 Watts" → 1061 W
         "TxPower":    safe_float(raw.get("TxPower", "0")),
-        # ERP: "0 dB" → 0 dB
-        "ERP":        safe_float(raw.get("ERP", "0")),
+        # ERP: "15" → 1.5 dB (chia 10 để đồng bộ với widget và database)
+        "ERP":        safe_float(raw.get("ERP", "0"), 10),
         # Efficiency: "1000%" → 100%  (chia 10)
         "Efficiency": safe_float(raw.get("Efficiency", "0"), 10),
         "PRF":        safe_float(raw.get("PRF", "0")),

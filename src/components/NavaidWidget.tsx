@@ -5,7 +5,7 @@ import './NavaidWidget.css';
 // Access ApexCharts from window
 const ApexCharts = (window as any).ApexCharts;
 
-const DEFAULT_API_URL = "https://morale-delivery-chirping.ngrok-free.dev/navaid";
+const DEFAULT_API_URL = "https://sirms-api.hainh.io.vn/navaid";
 const REFRESH_MS = 5000;
 
 interface NavaidResponse {
@@ -53,7 +53,13 @@ const NavaidWidget: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const res = await fetch(apiUrl, { cache: "no-store", headers: { "ngrok-skip-browser-warning": "true" } });
+      const res = await fetch(apiUrl, { 
+        cache: "no-store", 
+        headers: { 
+          "ngrok-skip-browser-warning": "true",
+          "authorization": "nguyenhoanghai1992"
+        } 
+      });
       const json = await res.json() as NavaidResponse;
       if (json.ok && json.data) {
         setData(json.data);
@@ -163,7 +169,8 @@ const NavaidWidget: React.FC = () => {
       .map(d => {
         const ts = Date.parse(String(d.timestamp).replace(' ', 'T'));
         let val = parseFloat(String(d.value));
-        if (selectedParam === 'ERP') val = val / 10;
+        // ERP is now normalized in the database
+        // if (selectedParam === 'ERP') val = val / 10;
         return { x: ts, y: val, tx: d.tx || '—' };
       })
       .filter(p => !isNaN(p.x) && !isNaN(p.y))
@@ -429,14 +436,13 @@ const DeviceCard = ({ title, type, deviceData, onParamClick }: any) => {
     ["RF Level", deviceData?.RFLevel, "dB"], ["Antenna", deviceData?.Antenna, ""],
   ];
   const dmeParams = [
-    ["Load", deviceData?.Load, ""],
+    ["Tải giả", deviceData?.Load, ""],
     ["Delay", deviceData?.Delay, "µs"],
     ["Spacing", deviceData?.Spacing, "µs"],
     ["Tx Power", deviceData?.TxPower, "W"],
-    ["ERP", deviceData?.ERP != null ? (Number(deviceData.ERP) / 10).toFixed(1) : null, "dB"],
+    ["ERP", deviceData?.ERP, "dB"],
     ["Efficiency", deviceData?.Efficiency, "%"],
     ["PRF", deviceData?.PRF, "ppps"],
-    ["Alert", deviceData?.Alert, ""],
   ];
   const params = type === 'vor' ? vorParams : dmeParams;
 

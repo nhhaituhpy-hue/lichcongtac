@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Plus, Clock, Users, Cloud, Calendar, ChevronLeft, ChevronRight, Trash2, Settings, LogOut, FileText, StickyNote } from 'lucide-react';
+import { Plus, Clock, Users, Cloud, Calendar, ChevronLeft, ChevronRight, Trash2, Settings, LogOut, FileText, StickyNote, Fingerprint, Smartphone } from 'lucide-react';
 import { Task, TaskStatus, ShiftSchedule, DailyNote } from '../types.ts';
 import { motion } from 'framer-motion';
 import { getNow, getVietnamTodayKey, getDaysFromWeek, getCurrentWeek } from '../utils/timeUtils';
 import InstallGuide from './InstallGuide';
 import ShiftScheduleImportModal from './ShiftScheduleImportModal';
 import NavaidWidget from './NavaidWidget';
+import { isPWADisplay, isWebAuthnSupported, registerBiometric } from '../utils/webauthnUtils';
 
 interface DashboardProps {
   tasks: Task[];
@@ -24,7 +25,6 @@ interface DashboardProps {
   dailyNotes?: DailyNote[];
   onUpdateDailyNote?: (date: string, content: string) => void;
 }
-
 
 const StatusBadge = ({ status }: { status: TaskStatus }) => {
   const configs = {
@@ -99,6 +99,12 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [currentMonthForShift, setCurrentMonthForShift] = useState('');
 
+  // Biometric state
+  const [showBiometricBanner, setShowBiometricBanner] = useState(false);
+  const [isBiometricRegistering, setIsBiometricRegistering] = useState(false);
+  const [showBiometricModal, setShowBiometricModal] = useState(false);
+  const [biometricDevices, setBiometricDevices] = useState<any[]>([]);
+
   const todayKey = getVietnamTodayKey();
 
   // Extract current month for shift schedule
@@ -107,7 +113,75 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
     setCurrentMonthForShift(`${year}-${month}`);
+
+    // Kiểm tra hiển thị banner sinh trắc học cho PWA
+    if (isWebAuthnSupported() && isPWADisplay()) {
+      const isEnabled = localStorage.getItem('dvor_biometric_enabled') === 'true';
+      const isDismissed = localStorage.getItem('dvor_biometric_dismissed') === 'true';
+      if (!isEnabled && !isDismissed) {
+        setShowBiometricBanner(true);
+      }
+    }
   }, []);
+
+  const handleRegisterBiometric = async () => {
+    if (isBiometricRegistering) return;
+    setIsBiometricRegistering(true);
+    try {
+      // Lấy tên thiết bị gợi nhớ
+      const userAgent = navigator.userAgent;
+      let deviceName = 'Thiết bị PWA';
+      if (userAgent.includes('iPhone')) deviceName = 'iPhone - PWA';
+      else if (userAgent.includes('iPad')) deviceName = 'iPad - PWA';
+      else if (userAgent.includes('Android')) deviceName = 'Android - PWA';
+      else if (userAgent.includes('Macintosh')) deviceName = 'Mac - PWA';
+      else if (userAgent.includes('Windows')) deviceName = 'Windows - PWA';
+
+      await registerBiometric(userRole, deviceName);
+      setShowBiometricBanner(false);
+      alert('Đã thiết lập đăng nhập bằng sinh trắc học thành công!');
+    } catch (err: any) {
+      console.error('Register biometric error:', err);
+      alert(err.message || 'Không thể thiết lập sinh trắc học.');
+    } finally {
+      setIsBiometricRegistering(false);
+    }
+  };
+
+  const handleDismissBiometricBanner = () => {
+    localStorage.setItem('dvor_biometric_dismissed', 'true');
+    setShowBiometricBanner(false);
+  };
+
+  const fetchBiometricDevices = async () => {
+    try {
+      const res = await fetch('/api/webauthn/credentials');
+      if (res.ok) {
+        const data = await res.json() as any[];
+        setBiometricDevices(data);
+      }
+    } catch (e) {
+      console.error('Fetch devices error:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (showBiometricModal) {
+      fetchBiometricDevices();
+    }
+  }, [showBiometricModal]);
+
+  const handleDeleteBiometricDevice = async (id: string) => {
+    if (!confirm('Bạn có chắc chắn muốn hủy đăng ký sinh trắc học của thiết bị này?')) return;
+    try {
+      const res = await fetch(`/api/webauthn/credentials?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setBiometricDevices(biometricDevices.filter(d => d.id !== id));
+      }
+    } catch (e) {
+      console.error('Delete device error:', e);
+    }
+  };
 
   // Get shift schedules for a specific date
   const getShiftForDate = (dateKey: string) => {
@@ -181,6 +255,13 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
               {userRole === 'ADMIN' && (
                 <>
                   <button
+                    onClick={() => setShowBiometricModal(true)}
+                    title="Quản lý thiết bị sinh trắc học"
+                    className="p-2 border border-surface-container-highest text-on-surface-variant hover:text-primary hover:bg-primary/10 hover:border-primary/30 rounded-full transition-colors flex items-center justify-center cursor-pointer"
+                  >
+                    <Fingerprint size={16} className="md:w-[18px] md:h-[18px]" />
+                  </button>
+                  <button
                     onClick={() => setShowShiftModal(true)}
                     title="Import lịch trực"
                     className="p-2 border border-surface-container-highest text-on-surface-variant hover:text-primary hover:bg-primary/10 hover:border-primary/30 rounded-full transition-colors flex items-center justify-center cursor-pointer"
@@ -246,6 +327,40 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
           </div>
         </div>
       </div>
+
+      {/* Biometric Banner for PWA */}
+      {showBiometricBanner && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-4 md:mx-8 mt-4 p-4 md:p-6 bg-primary-container/30 border border-primary/30 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-md"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-primary text-on-primary rounded-xl flex-shrink-0 shadow-lg">
+              <Fingerprint size={24} className="animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-sm md:text-base font-black text-on-surface uppercase tracking-wide">Bật đăng nhập bằng Face ID / Touch ID</h3>
+              <p className="text-xs md:text-sm font-medium text-on-surface-variant mt-0.5">Bạn đang sử dụng PWA. Bật tính năng này để đăng nhập nhanh không cần mã PIN cho các lần sau.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+            <button
+              onClick={handleDismissBiometricBanner}
+              className="px-4 py-2 text-xs font-black uppercase text-on-surface-variant hover:bg-surface-container rounded-xl transition-all cursor-pointer"
+            >
+              Bỏ qua
+            </button>
+            <button
+              onClick={handleRegisterBiometric}
+              disabled={isBiometricRegistering}
+              className="px-6 py-2.5 bg-primary hover:bg-primary-container text-on-primary text-xs font-black uppercase rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+            >
+              {isBiometricRegistering ? 'Đang thiết lập...' : 'Bật ngay'}
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Vertical List Container */}
       <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-8 flex flex-col gap-4 md:gap-6 pt-4">
@@ -406,6 +521,50 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
           );
         })}
       </div>
+
+      {/* Biometric Management Modal */}
+      {showBiometricModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-surface-container-highest flex flex-col max-h-[80vh]"
+          >
+            <div className="p-6 bg-primary text-on-primary flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Fingerprint size={24} />
+                <h2 className="text-lg font-black uppercase tracking-wider">Quản lý thiết bị sinh trắc học</h2>
+              </div>
+              <button onClick={() => setShowBiometricModal(false)} className="text-on-primary/70 hover:text-white font-bold cursor-pointer">✕</button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-4">
+              {biometricDevices.length === 0 ? (
+                <p className="text-center text-sm font-bold text-on-surface-variant/50 py-8">Chưa có thiết bị nào đăng ký sinh trắc học.</p>
+              ) : (
+                biometricDevices.map(dev => (
+                  <div key={dev.id} className="p-4 bg-surface-container-lowest border border-surface-container-highest rounded-2xl flex items-center justify-between gap-4 shadow-sm hover:shadow transition-shadow">
+                    <div className="flex items-center gap-3">
+                      <Smartphone size={20} className="text-primary flex-shrink-0" />
+                      <div>
+                        <h4 className="text-sm font-black text-on-surface">{dev.device_name}</h4>
+                        <p className="text-[11px] font-medium text-on-surface-variant">Quyền: <span className="font-bold text-primary">{dev.role}</span> • Đăng ký: {new Date(dev.created_at).toLocaleDateString('vi-VN')}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleDeleteBiometricDevice(dev.id)}
+                      className="p-2 text-on-surface-variant/40 hover:text-error hover:bg-error/10 rounded-xl transition-all cursor-pointer"
+                      title="Hủy đăng ký thiết bị"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {showShiftModal && (
         <ShiftScheduleImportModal
           onClose={() => setShowShiftModal(false)}

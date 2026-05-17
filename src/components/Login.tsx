@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Lock, ArrowRight, ShieldCheck, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Lock, ArrowRight, ShieldCheck, User, Fingerprint } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { isWebAuthnSupported, loginBiometric, isPWADisplay } from '../utils/webauthnUtils';
 
 interface LoginProps {
   onLogin: (role: 'VIEWER' | 'ADMIN') => void;
@@ -15,6 +16,22 @@ export default function Login({ onLogin }: LoginProps) {
   const [captchaQuestion, setCaptchaQuestion] = useState('');
   const [captchaAnswer, setCaptchaAnswer] = useState('');
 
+  // Biometric state
+  const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
+  const [isBiometricLoading, setIsBiometricLoading] = useState(false);
+  const [biometricError, setBiometricError] = useState('');
+
+  useEffect(() => {
+    // Kiểm tra thiết bị có hỗ trợ WebAuthn và đã từng bật sinh trắc học chưa
+    if (isWebAuthnSupported()) {
+      const isEnabled = localStorage.getItem('dvor_biometric_enabled') === 'true';
+      // Hoặc nếu đang chạy trên PWA, luôn hiển thị nút để người dùng có thể thử
+      if (isEnabled || isPWADisplay()) {
+        setIsBiometricAvailable(true);
+      }
+    }
+  }, []);
+
   // Simple hashing function to map PINs to the requested strings
   // This is obfuscated so "888888" and "123" don't appear in plain text
   const getHashedPin = (input: string) => {
@@ -28,8 +45,10 @@ export default function Login({ onLogin }: LoginProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoading) return;
+    if (isLoading || isBiometricLoading) return;
     setIsLoading(true);
+    setError(false);
+    setErrorMessage('');
     
     try {
       const hashedPin = getHashedPin(pin);
@@ -65,6 +84,24 @@ export default function Login({ onLogin }: LoginProps) {
     }
   };
 
+  const handleBiometricLogin = async () => {
+    if (isBiometricLoading || isLoading) return;
+    setIsBiometricLoading(true);
+    setBiometricError('');
+    setError(false);
+
+    try {
+      const { role } = await loginBiometric();
+      onLogin(role);
+    } catch (err: any) {
+      console.error('Biometric login error:', err);
+      setBiometricError(err.message || 'Xác thực sinh trắc học thất bại.');
+      setTimeout(() => setBiometricError(''), 4000);
+    } finally {
+      setIsBiometricLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-surface flex items-center justify-center p-6">
       <motion.div
@@ -92,7 +129,7 @@ export default function Login({ onLogin }: LoginProps) {
           </div>
 
           <div className="p-10">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant px-1">Mã Pin Truy Cập</label>
                 <div className="relative">
@@ -101,8 +138,10 @@ export default function Login({ onLogin }: LoginProps) {
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
                     placeholder="••••••"
-                    className={`w-full bg-surface-container-low border-2 rounded-2xl px-6 py-4 text-center text-2xl font-black tracking-[0.5em] focus:bg-white outline-none transition-all ${error ? 'border-error animate-shake' : 'border-transparent focus:border-primary/20'
-                      }`}
+                    disabled={isLoading || isBiometricLoading}
+                    className={`w-full bg-surface-container-low border-2 rounded-2xl px-6 py-4 text-center text-2xl font-black tracking-[0.5em] focus:bg-white outline-none transition-all ${
+                      error ? 'border-error animate-shake' : 'border-transparent focus:border-primary/20'
+                    }`}
                     inputMode="numeric"
                     pattern="[0-9]*"
                     autoFocus
@@ -120,6 +159,7 @@ export default function Login({ onLogin }: LoginProps) {
                         value={captchaAnswer}
                         onChange={(e) => setCaptchaAnswer(e.target.value)}
                         placeholder="Kết quả"
+                        disabled={isLoading || isBiometricLoading}
                         className="w-full bg-surface-container-low border-2 border-transparent focus:border-primary/20 rounded-xl px-4 py-3 text-center font-black outline-none transition-all"
                       />
                     </motion.div>
@@ -139,17 +179,48 @@ export default function Login({ onLogin }: LoginProps) {
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isBiometricLoading}
                 className={`w-full bg-primary hover:bg-primary-container text-on-primary py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-3 group ${
-                  isLoading ? 'opacity-70 cursor-not-allowed' : ''
+                  (isLoading || isBiometricLoading) ? 'opacity-70 cursor-not-allowed' : ''
                 }`}
               >
                 <span>{isLoading ? 'Đang xác thực...' : 'Xác nhận truy cập'}</span>
-                {!isLoading && <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />}
+                {!isLoading && !isBiometricLoading && <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />}
               </button>
             </form>
 
-            <div className="mt-12 pt-8 border-t border-surface-container flex flex-col gap-4">
+            {/* Biometric Login Section for PWA */}
+            {isBiometricAvailable && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-6 pt-6 border-t border-surface-container flex flex-col gap-3"
+              >
+                <button
+                  type="button"
+                  onClick={handleBiometricLogin}
+                  disabled={isBiometricLoading || isLoading}
+                  className={`w-full bg-primary-container/20 hover:bg-primary-container/40 text-primary py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all border border-primary/20 flex items-center justify-center gap-3 group ${
+                    (isBiometricLoading || isLoading) ? 'opacity-70 cursor-not-allowed animate-pulse' : ''
+                  }`}
+                >
+                  <Fingerprint size={20} className={`text-primary ${isBiometricLoading ? 'animate-spin' : 'group-hover:scale-110 transition-transform'}`} />
+                  <span>{isBiometricLoading ? 'Scanning...' : 'Face ID / Touch ID'}</span>
+                </button>
+
+                {biometricError && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-error text-[10px] font-black uppercase text-center tracking-wider"
+                  >
+                    {biometricError}
+                  </motion.p>
+                )}
+              </motion.div>
+            )}
+
+            <div className="mt-8 pt-8 border-t border-surface-container flex flex-col gap-4">
               <div className="flex items-center gap-3 text-on-surface-variant/40">
                 <ShieldCheck size={16} />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-left flex-1">Phân quyền hệ thống</span>

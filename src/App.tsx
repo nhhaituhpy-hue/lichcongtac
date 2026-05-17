@@ -96,7 +96,14 @@ export default function App() {
             alert('Công việc bạn đang xem đã bị xóa bởi người dùng khác.');
           }
         }
-        setTasks(data);
+        
+        setTasks(prev => {
+          // Create a map of existing tasks by ID
+          const taskMap = new Map(prev.map(t => [t.id, t]));
+          // Overwrite/Add new tasks
+          data.forEach((t: Task) => taskMap.set(t.id, t));
+          return Array.from(taskMap.values());
+        });
       }
     } catch (e) {
       console.error('Failed to fetch tasks:', e);
@@ -160,7 +167,11 @@ export default function App() {
       const response = await fetch(url);
       const data = await response.json();
       if (Array.isArray(data)) {
-        setDailyNotes(data);
+        setDailyNotes(prev => {
+          const noteMap = new Map(prev.map(n => [n.date, n]));
+          data.forEach((n: DailyNote) => noteMap.set(n.date, n));
+          return Array.from(noteMap.values());
+        });
       }
     } catch (e) {
       console.error('Failed to fetch daily notes:', e);
@@ -172,8 +183,17 @@ export default function App() {
     const days = getDaysFromWeek(year, week);
     if (days.length === 0) return;
     
-    const startDate = days[0].key;
-    const endDate = days[6].key;
+    // Calculate a 3-week range for preloading (Week -1, Week 0, Week +1)
+    const currentStart = new Date(days[0].key);
+    
+    const preloadStart = new Date(currentStart);
+    preloadStart.setDate(preloadStart.getDate() - 7);
+    
+    const preloadEnd = new Date(currentStart);
+    preloadEnd.setDate(preloadEnd.getDate() + 20); // 7 (this week) + 7 (next week) + 6 (to end of next week) = 20
+    
+    const startDate = preloadStart.toISOString().split('T')[0];
+    const endDate = preloadEnd.toISOString().split('T')[0];
 
     fetchTasks(startDate, endDate);
     fetchDailyNotes(startDate, endDate);

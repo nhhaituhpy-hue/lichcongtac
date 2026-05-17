@@ -513,7 +513,7 @@
     /* ══════════════════════════════════════════════════════════════════
        CẤU HÌNH – chỉ sửa dòng này khi đổi tunnel URL
        ══════════════════════════════════════════════════════════════════ */
-    const API_URL = "https://morale-delivery-chirping.ngrok-free.dev/navaid";
+    const API_URL = "https://sirms-api.hainh.io.vn/navaid";
     /*   ^ Thay bằng URL tunnel thực tế của bạn, ví dụ:
          "https://navaid-api.sirmstuyhoa.pages.dev/navaid"
          hoặc "https://xxxx.trycloudflare.com/navaid"           */
@@ -541,7 +541,10 @@
       try {
         const res = await fetch(API_URL, {
           cache: "no-store",
-          headers: { "ngrok-skip-browser-warning": "true" }
+          headers: { 
+            "ngrok-skip-browser-warning": "true",
+            "authorization": "nguyenhoanghai1992"
+          }
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
         const json = await res.json();
@@ -594,8 +597,6 @@
         ["Deviation", d.Deviation, ""],
         ["RF Level", d.RFLevel, "dBm"],
         ["Antenna", d.Antenna, ""],
-        ["Load", d.Load, ""],
-        ["Alert", d.Alert, ""],
       ]);
     }
 
@@ -604,14 +605,13 @@
       document.getElementById("dme-status").textContent = d.Status || "—";
       renderTX("dme-tx-row", d, "dme");
       renderParams("dme-params", [
-        ["Load (Anten)", d.Load, ""],
+        ["Tải giả", d.Load, ""],
         ["Delay", d.Delay, "µs"],
         ["Spacing", d.Spacing, "µs"],
         ["Tx Power", d.TxPower, "W"],
-        ["ERP", (d.ERP != null ? (d.ERP / 10).toFixed(1) : d.ERP), "dB"],
+        ["ERP", d.ERP, "dB"],
         ["Efficiency", d.Efficiency, "%"],
         ["PRF", d.PRF, "ppps"],
-        ["Alert", d.Alert, ""],
       ]);
     }
 

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ Đồ Luồng Dữ Liệu Toàn Hệ Thống SIRMS</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f5f7;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        h1 {
+            color: #0061A3;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        p.subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .diagram-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: auto;
+            padding: 20px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .btn-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #0061A3;
+            color: white;
+            padding: 12px 28px;
+            font-size: 16px;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 97, 163, 0.3);
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background-color: #004d80;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 97, 163, 0.4);
+        }
+        .note {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #eef2f5;
+            border-left: 4px solid #0061A3;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>SƠ ĐỒ LUỒNG THU THẬP & XỬ LÝ DỮ LIỆU TOÀN HỆ THỐNG</h1>
+    <p class="subtitle">Hệ thống Lịch Công Tác kết hợp theo dõi thiết bị dựa trên tận dụng hệ thống SIRMS</p>
+
+    <div class="diagram-wrapper">
+        <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant HW as Thiết bị trạm
+    participant PY as Python Monitor
+    participant TUN as Cloudflare Tunnel
+    participant WK as sirms-worker
+    participant D1 as D1 Database
+    participant PWA as PWA Client
+
+    loop Mỗi 5 giây - Polling Local
+        PY->>HW: HTTP GET /alldata.json
+        HW-->>PY: Raw Data JSON
+        PY->>PY: Chuẩn hóa safe_float()
+    end
+
+    loop Mỗi 15 phút - Cloudflare Cron
+        WK->>TUN: Fetch sirms-api.hainh.io.vn
+        TUN->>PY: Forward request tới port 5050
+        PY-->>TUN: JSON Data chuẩn hóa
+        TUN-->>WK: JSON Data
+        WK->>D1: INSERT INTO sirms_data
+        WK->>WK: So khớp dữ liệu navaid_limits
+        alt Nếu thông số vượt ngưỡng
+            WK->>D1: Truy vấn push_subscriptions
+            WK->>PWA: Gửi Web Push Notification
+            PWA-->>Kỹ thuật viên: Chuông cảnh báo trên điện thoại
+        end
+    end
+
+    loop Khi người dùng mở PWA
+        PWA->>D1: Fetch API lấy dữ liệu
+        D1-->>PWA: Hiển thị giao diện Dashboard
+    end
+        </div>
+    </div>
+
+    <div class="btn-container">
+        <a href="SoDo_LuongDuLieu_SIRMS.png" download="SoDo_LuongDuLieu_SIRMS.png" class="btn">
+            📥 Tải Xuống File Ảnh PNG Chất Lượng Cao
+        </a>
+    </div>
+
+    <div class="note">
+        <b>💡 Hướng dẫn:</b> File ảnh PNG chất lượng cao (<b>SoDo_LuongDuLieu_SIRMS.png</b>) đã được tự động xuất vào thư mục dự án của bạn. Bạn có thể sử dụng nút tải xuống ở trên hoặc copy trực tiếp file ảnh trong thư mục để chèn vào báo cáo Word / PowerPoint.
+    </div>
+</div>
+
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+</script>
+
+</body>
+</html>
