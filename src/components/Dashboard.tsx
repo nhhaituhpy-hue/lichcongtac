@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Clock, Users, Cloud, Calendar, ChevronLeft, ChevronRight, Trash2, Settings, LogOut, FileText, StickyNote, Fingerprint, Smartphone } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Clock, Users, Cloud, Calendar, ChevronLeft, ChevronRight, Trash2, Settings, LogOut, FileText, StickyNote, Fingerprint, Smartphone, Navigation, RotateCcw } from 'lucide-react';
 import { Task, TaskStatus, ShiftSchedule, DailyNote } from '../types.ts';
 import { motion } from 'framer-motion';
 import { getNow, getVietnamTodayKey, getDaysFromWeek, getCurrentWeek } from '../utils/timeUtils';
@@ -106,6 +106,59 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
   const [biometricDevices, setBiometricDevices] = useState<any[]>([]);
 
   const todayKey = getVietnamTodayKey();
+
+  const todayRef = useRef<HTMLDivElement>(null);
+  const shouldScrollToTodayRef = useRef(false);
+  const hasAutoScrolled = useRef(false);
+
+  const scrollToToday = (behavior: ScrollBehavior = 'smooth') => {
+    if (todayRef.current) {
+      todayRef.current.scrollIntoView({ behavior, block: 'center' });
+    }
+  };
+
+  const handleScrollToToday = () => {
+    const currentWeek = getCurrentWeek();
+    if (selectedWeek !== currentWeek) {
+      shouldScrollToTodayRef.current = true;
+      onWeekChange(currentWeek);
+    } else {
+      scrollToToday('smooth');
+    }
+  };
+
+  // Scroll to today on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!hasAutoScrolled.current) {
+        hasAutoScrolled.current = true;
+        scrollToToday('smooth');
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Scroll to today when tasks first load
+  useEffect(() => {
+    if (tasks.length > 0 && !hasAutoScrolled.current) {
+      hasAutoScrolled.current = true;
+      const timer = setTimeout(() => {
+        scrollToToday('smooth');
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [tasks]);
+
+  // Scroll to today when selectedWeek changes back to current week via the today button
+  useEffect(() => {
+    if (shouldScrollToTodayRef.current && selectedWeek === getCurrentWeek()) {
+      shouldScrollToTodayRef.current = false;
+      const timer = setTimeout(() => {
+        scrollToToday('smooth');
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedWeek]);
 
   // Extract current month for shift schedule
   useEffect(() => {
@@ -372,6 +425,7 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
           return (
             <div
               key={day.key}
+              ref={isToday ? todayRef : undefined}
               className={`flex flex-col flex-shrink-0 rounded-2xl border shadow-sm overflow-hidden transition-all ${isToday
                 ? 'border-2 border-primary bg-primary/[0.05] shadow-lg md:scale-[1.01] z-10'
                 : isWeekend
@@ -574,6 +628,19 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
       )}
       <InstallGuide />
       <NavaidWidget />
+
+      {/* Floating Scroll to Today Button */}
+      <motion.button
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 1, scale: 1 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={handleScrollToToday}
+        className="fixed bottom-[92px] right-[28px] z-40 w-12 h-12 md:w-14 md:h-14 rounded-full bg-surface-container-lowest text-primary hover:bg-surface-container shadow-lg shadow-on-surface/10 border border-surface-container-highest flex items-center justify-center cursor-pointer transition-all"
+        title="Quay lại ngày hôm nay"
+      >
+        <RotateCcw size={20} className="md:w-6 md:h-6 stroke-[2.5]" />
+      </motion.button>
     </div>
   );
 }
