@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Clock, Users, Cloud, Calendar, ChevronLeft, ChevronRight, Trash2, Settings, LogOut, FileText, StickyNote, Fingerprint, Smartphone, Navigation, RotateCcw } from 'lucide-react';
+import { Plus, Clock, Users, Cloud, Calendar, ChevronLeft, ChevronRight, Trash2, Settings, LogOut, FileText, StickyNote, Fingerprint, Smartphone, Navigation, RotateCcw, BarChart3 } from 'lucide-react';
 import { Task, TaskStatus, ShiftSchedule, DailyNote } from '../types.ts';
 import { motion } from 'framer-motion';
 import { getNow, getVietnamTodayKey, getDaysFromWeek, getCurrentWeek } from '../utils/timeUtils';
 import InstallGuide from './InstallGuide';
 import ShiftScheduleImportModal from './ShiftScheduleImportModal';
 import NavaidWidget from './NavaidWidget';
+import ReportModal from './ReportModal';
 import { isPWADisplay, isWebAuthnSupported, registerBiometric } from '../utils/webauthnUtils';
 
 interface DashboardProps {
@@ -97,6 +98,7 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
   const displayWeek = weekStr || '42';
   const DAYS = getDaysFromWeek(yearStr, weekStr);
   const [showShiftModal, setShowShiftModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [currentMonthForShift, setCurrentMonthForShift] = useState('');
 
   // Biometric state
@@ -338,6 +340,14 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
                 <LogOut size={16} className="md:w-[18px] md:h-[18px]" />
               </button>
             </div>
+            <button
+              onClick={() => setShowReportModal(true)}
+              title="Xem thống kê báo cáo"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] md:text-[10px] font-bold border border-surface-container-highest bg-surface-container-low text-on-surface-variant hover:text-primary hover:bg-primary/10 hover:border-primary/30 transition-all cursor-pointer shadow-sm active:scale-95"
+            >
+              <BarChart3 size={12} className="text-primary" />
+              <span>BÁO CÁO</span>
+            </button>
             <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[9px] md:text-[10px] font-bold border transition-colors ${syncStatus === 'SAVING'
               ? 'bg-primary/10 text-primary border-primary/20'
               : 'bg-surface-container-highest text-on-surface-variant border-surface-container-highest'
@@ -455,19 +465,22 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
                     <div className="flex flex-wrap gap-2">
                       {getShiftForDate(day.key)
                         .sort((a, b) => getShiftPriority(a.shiftType) - getShiftPriority(b.shiftType))
-                        .map((shift) => (
-                          <div key={shift.id} className={`flex items-center gap-1.5 px-2 py-1 bg-white rounded-full border text-[10px] md:text-[11px] font-bold text-on-surface ${
-                            shift.shiftType === 'X' ? 'border-red-200' : 'border-blue-200'
-                          }`}>
-                            <span className={shift.shiftType === 'X' ? 'text-red-900' : 'text-blue-900'}>{shift.personName}</span>
-                            <span className={shift.shiftType === 'X' ? 'text-red-400' : 'text-blue-500'}>-</span>
-                            <span className={`px-1.5 py-0.5 rounded-full font-black text-[9px] ${
-                              shift.shiftType === 'X' ? 'bg-red-50 text-[#8B0000]' : 'bg-blue-100 text-blue-900'
+                        .map((shift) => {
+                          const isRed = shift.personName === 'Văn Ngọc Huy' && (shift.shiftType === 'X1' || shift.shiftType === 'Đ');
+                          return (
+                            <div key={shift.id} className={`flex items-center gap-1.5 px-2 py-1 bg-white rounded-full border text-[10px] md:text-[11px] font-bold text-on-surface ${
+                              isRed ? 'border-red-200' : 'border-blue-200'
                             }`}>
-                              {getShiftDisplayName(shift.shiftType)}
-                            </span>
-                          </div>
-                        ))}
+                              <span className={isRed ? 'text-red-900' : 'text-blue-900'}>{shift.personName}</span>
+                              <span className={isRed ? 'text-red-400' : 'text-blue-500'}>-</span>
+                              <span className={`px-1.5 py-0.5 rounded-full font-black text-[9px] ${
+                                isRed ? 'bg-red-50 text-[#8B0000]' : 'bg-blue-100 text-blue-900'
+                              }`}>
+                                {getShiftDisplayName(shift.shiftType)}
+                              </span>
+                            </div>
+                          );
+                        })}
                     </div>
                   </div>
                 </div>
@@ -628,6 +641,11 @@ export default function Dashboard({ tasks, onCreateTask, onDeleteTask, onTaskCli
       )}
       <InstallGuide />
       <NavaidWidget />
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        currentMonth={DAYS[3]?.month || ''}
+      />
 
       {/* Floating Scroll to Today Button */}
       <motion.button
